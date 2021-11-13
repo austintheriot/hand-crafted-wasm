@@ -26,7 +26,10 @@
   (global $MOUSE_Y (mut f32) (f32.const 0))
   (global $CANVAS_WIDTH (mut f32) (f32.const 0))
   (global $CANVAS_HEIGHT (mut f32) (f32.const 0))
+  ;; 0 = mouse up, 1 = mouse down
   (global $MOUSE_STATE (mut i32) (i32.const 0))
+  ;; 0 = pause, 1 = play
+  (global $PLAY_STATE (mut i32) (i32.const 1))
 
   ;; canvas data
   (global $BPP (export "BPP") i32 (i32.const 4)) ;; bytes per pixel
@@ -85,9 +88,20 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    (func (export "set_mouse_state") (param $mouse_state i32)
     (global.set $MOUSE_STATE (local.get $mouse_state))   
+
+    ;; if mouse is now down, mark cell alive wherever it is
     (if (i32.eq (global.get $MOUSE_STATE) (i32.const 1))
-      (then (call $mark_cell_alive_from_input))
+      (then 
+        (call $mark_cell_alive_from_input)
+      )
     )
+
+    ;; if play state is paused, update canvas manually
+    (if (i32.eqz (global.get $PLAY_STATE)) (call $iterate_through_cells (global.get $DRAW_CELL)))
+  )
+
+  (func (export "set_play_state") (param $play_state i32)
+    (global.set $PLAY_STATE (local.get $play_state))   
   )
 
   (func (export "set_mouse_position") (param $x f32)  (param $y f32) (param $width f32) (param $height f32)
@@ -96,9 +110,13 @@
     (global.set $CANVAS_WIDTH (local.get $width))   
     (global.set $CANVAS_HEIGHT (local.get $height))   
 
+    ;; if mouse sate is down, mark cell alive
     (if (i32.eq (global.get $MOUSE_STATE) (i32.const 1))
       (then (call $mark_cell_alive_from_input))
     )
+
+    ;; if play state is paused, update canvas manually
+    (if (i32.eqz (global.get $PLAY_STATE)) (call $iterate_through_cells (global.get $DRAW_CELL)))
   )
 
   ;; FUNCTIONS
@@ -594,6 +612,7 @@
 
   ;; update game state on every tick
   (func $update (export "update")
+    (if (i32.eqz (global.get $PLAY_STATE)) (return))
     (call $iterate_through_cells (global.get $UPDATE_CELL))
     (call $iterate_through_cells (global.get $COPY_CELL))
     (call $iterate_through_cells (global.get $DRAW_CELL))

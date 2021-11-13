@@ -7,6 +7,7 @@
       justify-content: center;
       margin: 0;
       background-color: black;
+      position: 'relative';
     }
 
     canvas {
@@ -20,10 +21,28 @@
       image-rendering: pixelated;
       image-rendering: crisp-edges;
     }
+
+    .buttons {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .buttons button {
+      font-size: 1.2rem;
+    }
   </style>
 </head>
 
 <body>
+  <div class="buttons">
+    <button type="button" class="pause">Pause</button>
+    <button type="button" class="play">Play</button>
+    <button type="button" class="reset">Reset</button>
+  </div>
   <canvas></canvas>
   <script>
     fetch('./life_debug.wasm').then(response =>
@@ -38,7 +57,7 @@
       canvas.height = wasm.HEIGHT;
       wasm.init();
 
-      // attach desktop interaction listeners
+      // desktop listeners
       canvas.onmousemove = ({ offsetX, offsetY }) => {
         const { width, height } = canvas.getBoundingClientRect();
         wasm.set_mouse_position(offsetX, offsetY, width, height);
@@ -47,7 +66,7 @@
       canvas.onmousedown = () => wasm.set_mouse_state(1);
       canvas.onmouseleave = () => wasm.set_mouse_state(0);
 
-      // attach mobile interaction listeners
+      // mobile listeners
       canvas.ontouchmove = ({ touches }) => {
         const { clientX, clientY } = touches[touches.length - 1];
         const { width, height } = canvas.getBoundingClientRect();
@@ -55,6 +74,11 @@
       };
       canvas.ontouchstart = () => wasm.set_mouse_state(1);
       canvas.ontouchend = () => wasm.set_mouse_state(0);
+
+      // button listeners
+      document.querySelector('.play').onclick = () => wasm.set_play_state(1);
+      document.querySelector('.pause').onclick = () => wasm.set_play_state(0);
+      document.querySelector('.reset').onclick = () => wasm.init();
 
       // get reference to canvas image data in wasm's linear memory
       const canvasData = new Uint8Array(
