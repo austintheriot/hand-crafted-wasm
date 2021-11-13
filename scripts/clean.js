@@ -1,0 +1,2 @@
+require('../utils/scriptUtils').clean();
+

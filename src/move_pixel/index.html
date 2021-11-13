@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+
+<head>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+    }
+
+    canvas {
+      width: 95vw;
+      height: 95vw;
+      /* default is to smooth edges of pixels on canvas */
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas></canvas>
+  <script>
+    fetch('./move_pixel.wasm').then(response =>
+      response.arrayBuffer()
+    ).then(bytes =>
+      WebAssembly.instantiate(bytes, { console })
+    ).then(({ instance: { exports: wasm } }) => {
+      // setup canvas dimensions
+      const canvas = document.querySelector('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = wasm.WIDTH;
+      canvas.height = wasm.HEIGHT;
+      wasm.init_canvas_data();
+
+      // get reference to canvas image data in wasm's linear memory
+      const canvasData = new Uint8Array(
+        wasm.memory.buffer, 
+        wasm.CANVAS_BUFFER_OFFSET, 
+        wasm.CANVAS_MEMORY_LENGTH
+      );
+
+      // transform wasm linear memory to image data
+      const imageData = ctx.createImageData(wasm.WIDTH, wasm.HEIGHT);
+      imageData.data.set(canvasData);
+      ctx.putImageData(imageData, 0, 0);
+
+      // animate
+      (async function animate() {
+        // slow down animation for debugging
+        // await new Promise((res) => setTimeout(res, 500));
+        requestAnimationFrame(animate);
+        wasm.update();
+        imageData.data.set(canvasData);
+        ctx.putImageData(imageData, 0, 0);
+      })();
+    }).catch((e) => console.error(e));
+  </script>
+</body>

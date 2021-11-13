@@ -1,0 +1,30 @@
+{
+  "name": "wasm",
+  "version": "1.0.0",
+  "description": "Experiments in writing WebAssembly by hand",
+  "main": "",
+  "scripts": {
+    "clean": "node ./scripts/clean.js",
+    "build:debug": "node ./scripts/buildDebug.js",
+    "build:no-debug": "node ./scripts/buildNoDebug.js",
+    "optimize": "node ./scripts/optimize.js",
+    "build": "npm run clean && npm run build:debug && npm run build:no-debug && npm run optimize",
+    "test": "npm run build && jest --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/austintheriot/wasm.git"
+  },
+  "author": "Austin Theriot",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/austintheriot/wasm/issues"
+  },
+  "homepage": "https://github.com/austintheriot/wasm#readme",
+  "devDependencies": {
+    "binaryen": "^102.0.0",
+    "jest": "^27.3.1",
+    "wabt": "^1.0.24"
+  },
+  "dependencies": {}
+}

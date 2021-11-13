@@ -1,0 +1,442 @@
+;; CONWAY'S GAME OF LIFE
+
+(module
+  ;; IMPORTS
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; (import "console" "log" (func $log (param i32)))
+  (import "Math" "random" (func $random (result f64)))
+
+  ;; MEMORY
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;
+  ;; Proportional (dynamic) memory locations:
+  ;; [0..4)  canvas data: u8s grouped in 4: rgba() style
+  ;; [4..5)  original live/dead data cells: u8s
+  ;; [5..6)  copy of live/dead cells for reference on next frame: u8s 
+
+  ;; ($WIDTH * $HEIGHT * 6) / 64,000
+  (memory (export "memory") 9)
+  
+  ;; constant globals
+  (global $WIDTH (export "WIDTH") i32 (i32.const 300))
+  (global $HEIGHT (export "HEIGHT") i32 (i32.const 300))
+  (global $NUM_CELLS (mut i32) (i32.const 0))
+
+  ;; canvas data
+  (global $BPP (export "BPP") i32 (i32.const 4)) ;; bytes per pixel
+  (global $CANVAS_MEMORY_OFFSET (export "CANVAS_MEMORY_OFFSET") i32 (i32.const 0))
+  (global $CANVAS_MEMORY_LENGTH (export "CANVAS_MEMORY_LENGTH") (mut i32) (i32.const 0))
+  
+  ;; cell data
+  (global $CELL_MEMORY_OFFSET (mut i32) (i32.const 0))
+  (global $CELL_MEMORY_LENGTH (mut i32) (i32.const 0))
+  (global $CELL_MEMORY_OFFSET_COPY (mut i32) (i32.const 0))
+  (global $CHANCE_OF_SPAWNING f64 (f64.const 0.1))
+  (global $FADE_DECREMENT i32 (i32.const 1))
+  (global $ALIVE i32 (i32.const 255))
+  (global $DEAD i32 (i32.const 0))
+
+  ;; callback enum (in lieu of a table)
+  (global $DRAW_CELL i32 (i32.const 0))
+  (global $SPAWN_RANDOM i32 (i32.const 1))
+  (global $COPY_CELL i32 (i32.const 2))
+  (global $UPDATE_CELL i32 (i32.const 3))
+
+  ;; INIT GLOBALS 
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (func $set_num_cells
+    global.get $HEIGHT
+    global.get $WIDTH
+    i32.mul
+    global.set $NUM_CELLS
+  )
+  (func $set_cell_memory_length
+    global.get $WIDTH
+    global.get $HEIGHT
+    i32.mul
+    global.set $CELL_MEMORY_LENGTH
+  )
+  (func $set_canvas_memory_length
+    global.get $CELL_MEMORY_LENGTH
+    global.get $BPP
+    i32.mul
+    global.set $CANVAS_MEMORY_LENGTH
+  )
+  (func $set_cell_memory_offset
+    global.get $CANVAS_MEMORY_OFFSET
+    global.get $CANVAS_MEMORY_LENGTH
+    i32.add
+    global.set $CELL_MEMORY_OFFSET
+  )
+  (func $set_cell_memory_offset_copy
+    global.get $CELL_MEMORY_OFFSET
+    global.get $CELL_MEMORY_LENGTH
+    i32.add
+    global.set $CELL_MEMORY_OFFSET_COPY
+  )
+
+  ;; FUNCTIONS
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  ;; 255 == alive
+  ;; anything less than 255 === dead
+  (func $is_cell_at_actual_i_alive (param $actual_i i32) (result i32)
+    (i32.load8_u (local.get $actual_i))
+    (global.get $ALIVE)
+    i32.eq
+  )
+
+   (func $is_copy_cell_alive (param $actual_i i32) (result i32)
+    (if 
+      ;; too far left:
+      (i32.or (i32.lt_s 
+        (local.get $actual_i) 
+        (global.get $CELL_MEMORY_OFFSET_COPY)
+      )
+      ;; too far right
+      (i32.gt_s 
+        (local.get $actual_i) 
+        (i32.add 
+          (global.get $CELL_MEMORY_OFFSET_COPY) 
+          (global.get $CELL_MEMORY_LENGTH)
+        )
+      )
+    )
+      (return (global.get $DEAD))
+    )
+
+    ;; else return the actual value of the cell
+    (i32.load8_u (local.get $actual_i))
+    (global.get $ALIVE)
+    i32.eq
+  )
+
+  ;; converts cell number to index of cell
+  (func $raw_i_to_cell (param $raw_i i32) (result i32)
+    (i32.add 
+      (local.get $raw_i)
+      (global.get $CELL_MEMORY_OFFSET)
+    )
+  )
+
+  ;; converts cell number to index of copied cell
+  (func $raw_i_to_cell_copy (param $raw_i i32) (result i32)
+    (i32.add 
+      (local.get $raw_i)
+      (global.get $CELL_MEMORY_OFFSET_COPY)
+    )
+  )
+
+  ;; converts cell number to index of canvas cell pixel
+  (func $raw_i_to_pixel (param $raw_i i32) (result i32)
+    (i32.add 
+      (i32.mul
+        (local.get $raw_i)
+        (global.get $BPP)
+      )
+      (global.get $CANVAS_MEMORY_OFFSET)
+    )
+  )
+
+  ;; convert cell data into drawable pixels for the canvas
+  (func $draw_cell (param $raw_i i32)
+    (local $cell_i i32)
+    (local $pixel_i i32)
+    (local $cell_value i32)
+    (local $r i32)
+    (local $g i32)
+    (local $b i32)
+
+    ;; convert raw i to cell i & pixel i
+    (local.set $cell_i (call $raw_i_to_cell (local.get $raw_i)))
+    (local.set $pixel_i (call $raw_i_to_pixel (local.get $raw_i)))
+    (local.set $cell_value (i32.load8_u (local.get $cell_i)))
+
+    (block $block
+      ;; alive (255)
+      (if (i32.eq (local.get $cell_value) (global.get $ALIVE))
+        (then
+          (local.set $r (local.get $cell_value))
+          (local.set $g (local.get $cell_value))
+          (local.set $b (local.get $cell_value))
+          (br $block)
+        )
+      )
+
+      ;; r & g are constant
+      (local.set $r (i32.div_u (local.get $cell_value) (i32.const 6)))
+      (local.set $g (i32.div_u (local.get $cell_value) (i32.const 6)))
+
+      ;; b depends on the value of the cell
+      (if (i32.gt_u (local.get $cell_value) (i32.const 170))
+        (then
+          (local.set $b (i32.div_u (local.get $cell_value) (i32.const 3)))
+          (br $block)
+        )
+      )
+      (if (i32.gt_u (local.get $cell_value) (i32.const 85))
+        (then
+          (local.set $b (i32.div_u (local.get $cell_value) (i32.const 4)))
+          (br $block)
+        )
+      )
+      (local.set $r (i32.div_u (local.get $cell_value) (i32.const 6)))
+    )
+
+    ;; update canvas pixel data
+    (i32.store8 (local.get $pixel_i) (local.get $r))
+    (i32.store8 (i32.add (local.get $pixel_i) (i32.const 1)) (local.get $g))
+    (i32.store8 (i32.add (local.get $pixel_i) (i32.const 2)) (local.get $b))
+    (i32.store8 (i32.add (local.get $pixel_i) (i32.const 3)) (i32.const 0xFF))
+  )
+
+  ;; randomly mark cell as alive or dead
+  (func $spawn_random (param $raw_i i32)
+    (local $cell_i i32)
+    (local.set $cell_i (call $raw_i_to_cell (local.get $raw_i)))
+
+    ;; mark cell alive or dead
+    (if (f64.lt 
+          (call $random)
+          (global.get $CHANCE_OF_SPAWNING)
+        )
+        (then (i32.store8 (local.get $cell_i) (global.get $ALIVE)))
+        (else (i32.store8 (local.get $cell_i) (global.get $DEAD)))
+      )
+    )
+
+    (func $get_num_live_neighbors (param $actual_i i32) (result i32)
+    (local $num_live_neighbors i32)
+    (local.set $num_live_neighbors (i32.const 0))
+
+    ;; top left
+    (if 
+      (call $is_copy_cell_alive 
+        (i32.sub 
+          (i32.sub 
+            (local.get $actual_i)
+            (global.get $WIDTH)
+          )
+          (i32.const 1)
+        )
+      )
+       (local.set $num_live_neighbors (i32.add (local.get $num_live_neighbors) (i32.const 1)))
+    )
+
+    ;; top
+    (if 
+      (call $is_copy_cell_alive 
+        (i32.sub 
+            (local.get $actual_i)
+            (global.get $WIDTH)
+        )
+      )
+      (local.set $num_live_neighbors (i32.add (local.get $num_live_neighbors) (i32.const 1)))
+    )
+
+    ;; top right
+    (if 
+      (call $is_copy_cell_alive 
+        (i32.add 
+          (i32.sub 
+            (local.get $actual_i)
+            (global.get $WIDTH)
+          )
+          (i32.const 1)
+        )
+      )
+        (local.set $num_live_neighbors (i32.add (local.get $num_live_neighbors) (i32.const 1)))
+    )
+
+    ;; left
+    (if 
+      (call $is_copy_cell_alive 
+        (i32.sub 
+            (local.get $actual_i)
+            (i32.const 1)
+        )
+      )
+      (local.set $num_live_neighbors (i32.add (local.get $num_live_neighbors) (i32.const 1)))
+    )
+
+    ;; right
+     (if 
+      (call $is_copy_cell_alive 
+        (i32.add 
+            (local.get $actual_i)
+            (i32.const 1)
+        )
+      )
+      (local.set $num_live_neighbors (i32.add (local.get $num_live_neighbors) (i32.const 1)))
+    )
+
+    ;; bottom left
+    (if 
+      (call $is_copy_cell_alive 
+        (i32.sub 
+          (i32.add 
+            (local.get $actual_i)
+            (global.get $WIDTH)
+          )
+          (i32.const 1)
+        )
+      )
+       (local.set $num_live_neighbors (i32.add (local.get $num_live_neighbors) (i32.const 1)))
+    )
+
+    ;; bottom 
+    (if 
+      (call $is_copy_cell_alive 
+        (i32.add 
+          (local.get $actual_i)
+          (global.get $WIDTH)
+        )
+      )
+       (local.set $num_live_neighbors (i32.add (local.get $num_live_neighbors) (i32.const 1)))
+    )
+
+    ;; bottom right
+    (if 
+      (call $is_copy_cell_alive 
+        (i32.add 
+          (i32.add 
+            (local.get $actual_i)
+            (global.get $WIDTH)
+          )
+          (i32.const 1)
+        )
+      )
+       (local.set $num_live_neighbors (i32.add (local.get $num_live_neighbors) (i32.const 1)))
+    )
+
+
+    local.get $num_live_neighbors
+  )
+
+  (; The rules of Conway's Game of Life:
+  1. Any live cell with two or three live neighbours survives.
+  2. Any dead cell with three live neighbours becomes a live cell.
+  3. All other live cells die in the next generation. Similarly, all other dead cells stay dead. ;)
+  (func $update_cell (param $raw_i i32)
+    (local $cell_i i32)
+    (local $cell_copy_i i32)
+    (local $num_live_neighbors i32)
+    (local $current_cell_is_alive i32)
+    (local $next_life_state i32)
+    (local $cell_value i32)
+    (local $decremented_cell_value i32)
+
+    ;; convert raw i to cell i & cell copy i
+    (local.set $cell_i (call $raw_i_to_cell (local.get $raw_i)))
+    (local.set $cell_copy_i (call $raw_i_to_cell_copy (local.get $raw_i)))
+
+    ;; get current state of cell
+    (local.set $num_live_neighbors (call $get_num_live_neighbors (local.get $cell_copy_i)))
+    (local.set $current_cell_is_alive (call $is_cell_at_actual_i_alive (local.get $cell_copy_i)))
+    (local.set $cell_value (i32.load8_u (local.get $cell_copy_i)))
+    (local.set $decremented_cell_value (i32.sub (local.get $cell_value) (global.get $FADE_DECREMENT)))
+
+    ;; decrement cell value
+    (if (i32.gt_s (local.get $decremented_cell_value) (global.get $DEAD))
+      (then (local.set $cell_value (local.get $decremented_cell_value)))
+      (else (local.set $cell_value (global.get $DEAD)))
+    )
+
+    (if (i32.or 
+          ;; alive and 2 or 3 neighbors
+          (i32.and 
+            (local.get $current_cell_is_alive)
+            (i32.or 
+              (i32.eq 
+                (local.get $num_live_neighbors)
+                (i32.const 2)
+              )
+              (i32.eq 
+                (local.get $num_live_neighbors)
+                (i32.const 3)
+              )
+            ) 
+          )
+          ;; dead with 3 neighbors
+          (i32.eq 
+            (local.get $num_live_neighbors)
+            (i32.const 3)
+          )
+        )
+        ;; Any live cell with two or three live neighbours survives.
+        ;; Any dead cell with three live neighbours becomes a live cell.
+        (then (local.set $next_life_state (global.get $ALIVE)))
+
+        ;; All other live cells die in the next generation. 
+        ;; All other dead cells stay dead. 
+        (else (local.set $next_life_state (local.get $cell_value)))
+    )
+
+    ;; set life state of the current actual cell
+    (i32.store8 (local.get $cell_i) (local.get $next_life_state))
+  )
+
+  (func $copy_cell (param $raw_i i32)
+    (local $cell_i i32)
+    (local $cell_copy_i i32)
+
+    ;; convert raw i to cell i & cell copy i
+    (local.set $cell_i (call $raw_i_to_cell (local.get $raw_i)))
+    (local.set $cell_copy_i (call $raw_i_to_cell_copy (local.get $raw_i)))
+
+    (i32.store8 (local.get $cell_copy_i) (i32.load8_u (local.get $cell_i)))
+  )
+
+  (func $iterate_through_cells (param $cb_i i32)
+    (local $i i32)
+    (local.set $i (i32.const 0))
+
+    (loop $loop
+
+      ;; perform indicated callback
+      (if (i32.eq (local.get $cb_i) (global.get $SPAWN_RANDOM))
+        (call $spawn_random (local.get $i))
+      )
+      (if (i32.eq (local.get $cb_i) (global.get $DRAW_CELL))
+        (call $draw_cell (local.get $i))
+      )
+      (if (i32.eq (local.get $cb_i) (global.get $UPDATE_CELL))
+        (call $update_cell (local.get $i))
+      )
+      (if (i32.eq (local.get $cb_i) (global.get $COPY_CELL))
+        (call $copy_cell (local.get $i))
+      )
+
+      ;; loop until reaching the end of cells
+      (if (i32.eq (local.get $i) (i32.sub (global.get $NUM_CELLS)) (i32.const 1))
+        (then return)
+        (else 
+          (local.set $i (i32.add (local.get $i) (i32.const 1)))
+          br $loop
+        )
+      )
+    )
+  )
+
+  ;; prepares game state
+  (func $init (export "init")
+    ;; init globals
+    (call $set_num_cells)
+    (call $set_cell_memory_length)
+    (call $set_canvas_memory_length)
+    (call $set_cell_memory_offset)
+    (call $set_cell_memory_offset_copy)
+
+    ;; init cell & canvas state
+    (call $iterate_through_cells (global.get $SPAWN_RANDOM))
+    (call $iterate_through_cells (global.get $COPY_CELL))
+    (call $iterate_through_cells (global.get $DRAW_CELL))
+  )
+
+  ;; update game state on every tick
+  (func $update (export "update")
+    (call $iterate_through_cells (global.get $UPDATE_CELL))
+    (call $iterate_through_cells (global.get $COPY_CELL))
+    (call $iterate_through_cells (global.get $DRAW_CELL))
+  )
+)
