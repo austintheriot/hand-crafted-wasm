@@ -3,24 +3,30 @@
 (module
   ;; IMPORTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; (import "console" "log" (func $log (param i32)))
+  (import "console" "log" (func $log (param i32)))
+  (import "console" "log" (func $log_float (param f32)))
   (import "Math" "random" (func $random (result f64)))
 
   ;; MEMORY
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;;
-  ;; Proportional (dynamic) memory locations:
-  ;; [0..4)  canvas data: u8s grouped in 4: rgba() style
-  ;; [4..5)  original live/dead data cells: u8s
-  ;; [5..6)  copy of live/dead cells for reference on next frame: u8s 
+  ;; S = size of cell array
+  ;; [0xS..4xS)  canvas data: u8s grouped in 4: rgba() style
+  ;; [4xS..5xS)  original live/dead data cells: u8s
+  ;; [5xS..6xS)  copy of live/dead cells for reference on next frame: u8s 
 
-  ;; ($WIDTH * $HEIGHT * 6) / 64,000
   (memory (export "memory") 9)
   
   ;; constant globals
   (global $WIDTH (export "WIDTH") i32 (i32.const 300))
   (global $HEIGHT (export "HEIGHT") i32 (i32.const 300))
   (global $NUM_CELLS (mut i32) (i32.const 0))
+
+  ;; interaction state
+  (global $MOUSE_X (mut f32) (f32.const 0))
+  (global $MOUSE_Y (mut f32) (f32.const 0))
+  (global $CANVAS_WIDTH (mut f32) (f32.const 0))
+  (global $CANVAS_HEIGHT (mut f32) (f32.const 0))
+  (global $MOUSE_STATE (mut i32) (i32.const 0))
 
   ;; canvas data
   (global $BPP (export "BPP") i32 (i32.const 4)) ;; bytes per pixel
@@ -75,8 +81,125 @@
     global.set $CELL_MEMORY_OFFSET_COPY
   )
 
+  ;; CANVAS LISTENERS
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   (func (export "set_mouse_state") (param $mouse_state i32)
+    (global.set $MOUSE_STATE (local.get $mouse_state))   
+    (if (i32.eq (global.get $MOUSE_STATE) (i32.const 1))
+      (then (call $mark_cell_alive_from_input))
+    )
+  )
+
+  (func (export "set_mouse_position") (param $x f32)  (param $y f32) (param $width f32) (param $height f32)
+    (global.set $MOUSE_X (local.get $x))   
+    (global.set $MOUSE_Y (local.get $y))   
+    (global.set $CANVAS_WIDTH (local.get $width))   
+    (global.set $CANVAS_HEIGHT (local.get $height))   
+
+    (if (i32.eq (global.get $MOUSE_STATE) (i32.const 1))
+      (then (call $mark_cell_alive_from_input))
+    )
+  )
+
   ;; FUNCTIONS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  
+  ;; get max between two i32 values
+  (func $i32_max (param i32 i32) (result i32)
+    (select
+      (local.get 0)
+      (local.get 1)
+      (i32.gt_s (local.get 0) (local.get 1))
+    )
+  )
+
+  ;; get min between two i32 values
+  (func $i32_min (param i32 i32) (result i32)
+    (select
+      (local.get 0)
+      (local.get 1)
+      (i32.lt_s (local.get 0) (local.get 1))
+    )
+  )
+
+  ;; clamp an i32 number between two other values 
+  (func $i32_clamp (param $min i32) (param $num i32) (param $max i32) (result i32)
+    (call $i32_min 
+      (call $i32_max 
+        (local.get $num) 
+        (local.get $min)
+      ) 
+      (local.get $max)
+    )
+  )
+
+  (func $get_cell_num_from_coords (param $x i32) (param $y i32) (result i32)
+    ;; cell number = (y * width) + x
+    global.get $WIDTH
+    local.get $y
+    i32.mul
+    local.get $x
+    i32.add
+  )
+
+  (func $mark_cell_alive_from_input
+    (local $x_coord i32)
+    (local $y_coord i32)
+    (local $cell_number i32)
+    (local $cell_mem_index i32)
+    (local $cell_copy_mem_index i32)
+    (local.set $x_coord (i32.load (i32.const 0)))
+    (local.set $y_coord (i32.load (i32.const 1)))
+
+    ;; calculate cell position where mouse is on canvas
+    (local.set $x_coord 
+      (call $i32_clamp 
+        ;; don't go below 0
+        (i32.const 0)
+        ;; calculate cell coordinate
+        (i32.trunc_sat_f32_u
+          (f32.floor
+            (f32.mul
+              (f32.div 
+                (global.get $MOUSE_X) 
+                (global.get $CANVAS_WIDTH)
+              ) 
+              (f32.convert_i32_s (global.get $WIDTH))
+            )
+          )
+        )
+        ;; don't go above width - 1
+        (i32.sub (global.get $WIDTH) (i32.const 1))
+      )
+    )
+    (local.set $y_coord 
+      (call $i32_clamp 
+        ;; don't go below 0
+        (i32.const 0)
+        ;; calculate cell coordinate
+        (i32.trunc_sat_f32_u
+          (f32.floor
+            (f32.mul
+              (f32.div 
+                (global.get $MOUSE_Y) 
+                (global.get $CANVAS_HEIGHT)
+              ) 
+              (f32.convert_i32_s (global.get $HEIGHT))
+            )
+          )
+        )
+        ;; don't go above height - 1
+        (i32.sub (global.get $HEIGHT) (i32.const 1))
+      )
+    )
+  
+    (local.set $cell_number (call $get_cell_num_from_coords (local.get $x_coord) (local.get $y_coord)))
+    (local.set $cell_mem_index (call $cell_number_to_cell_mem_index (local.get $cell_number)))
+    (local.set $cell_copy_mem_index (call $cell_number_to_cell_copy_mem_index (local.get $cell_number)))
+
+    (i32.store8 (local.get $cell_mem_index) (global.get $ALIVE))
+    (i32.store8 (local.get $cell_copy_mem_index) (global.get $ALIVE))
+  )
 
   ;; 255 == alive
   ;; anything less than 255 === dead
@@ -111,27 +234,27 @@
     i32.eq
   )
 
-  ;; converts cell number to index of cell
-  (func $raw_i_to_cell (param $raw_i i32) (result i32)
+  ;; converts cell number to memory index of cell
+  (func $cell_number_to_cell_mem_index (param $cell_number i32) (result i32)
     (i32.add 
-      (local.get $raw_i)
+      (local.get $cell_number)
       (global.get $CELL_MEMORY_OFFSET)
     )
   )
 
-  ;; converts cell number to index of copied cell
-  (func $raw_i_to_cell_copy (param $raw_i i32) (result i32)
+  ;; converts cell number to memory index of copied cell
+  (func $cell_number_to_cell_copy_mem_index (param $cell_number i32) (result i32)
     (i32.add 
-      (local.get $raw_i)
+      (local.get $cell_number)
       (global.get $CELL_MEMORY_OFFSET_COPY)
     )
   )
 
-  ;; converts cell number to index of canvas cell pixel
-  (func $raw_i_to_pixel (param $raw_i i32) (result i32)
+  ;; converts cell number to memory index of canvas cell pixel
+  (func $cell_number_to_pixel_mem_index (param $cell_number i32) (result i32)
     (i32.add 
       (i32.mul
-        (local.get $raw_i)
+        (local.get $cell_number)
         (global.get $BPP)
       )
       (global.get $CANVAS_MEMORY_OFFSET)
@@ -148,8 +271,8 @@
     (local $b i32)
 
     ;; convert raw i to cell i & pixel i
-    (local.set $cell_i (call $raw_i_to_cell (local.get $raw_i)))
-    (local.set $pixel_i (call $raw_i_to_pixel (local.get $raw_i)))
+    (local.set $cell_i (call $cell_number_to_cell_mem_index (local.get $raw_i)))
+    (local.set $pixel_i (call $cell_number_to_pixel_mem_index (local.get $raw_i)))
     (local.set $cell_value (i32.load8_u (local.get $cell_i)))
 
     (block $block
@@ -193,7 +316,7 @@
   ;; randomly mark cell as alive or dead
   (func $spawn_random (param $raw_i i32)
     (local $cell_i i32)
-    (local.set $cell_i (call $raw_i_to_cell (local.get $raw_i)))
+    (local.set $cell_i (call $cell_number_to_cell_mem_index (local.get $raw_i)))
 
     ;; mark cell alive or dead
     (if (f64.lt 
@@ -327,8 +450,8 @@
     (local $decremented_cell_value i32)
 
     ;; convert raw i to cell i & cell copy i
-    (local.set $cell_i (call $raw_i_to_cell (local.get $raw_i)))
-    (local.set $cell_copy_i (call $raw_i_to_cell_copy (local.get $raw_i)))
+    (local.set $cell_i (call $cell_number_to_cell_mem_index (local.get $raw_i)))
+    (local.set $cell_copy_i (call $cell_number_to_cell_copy_mem_index (local.get $raw_i)))
 
     ;; get current state of cell
     (local.set $num_live_neighbors (call $get_num_live_neighbors (local.get $cell_copy_i)))
@@ -381,8 +504,8 @@
     (local $cell_copy_i i32)
 
     ;; convert raw i to cell i & cell copy i
-    (local.set $cell_i (call $raw_i_to_cell (local.get $raw_i)))
-    (local.set $cell_copy_i (call $raw_i_to_cell_copy (local.get $raw_i)))
+    (local.set $cell_i (call $cell_number_to_cell_mem_index (local.get $raw_i)))
+    (local.set $cell_copy_i (call $cell_number_to_cell_copy_mem_index (local.get $raw_i)))
 
     (i32.store8 (local.get $cell_copy_i) (i32.load8_u (local.get $cell_i)))
   )

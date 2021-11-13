@@ -24,7 +24,7 @@
 <body>
   <canvas></canvas>
   <script>
-    fetch('./life_optimized.wasm').then(response =>
+    fetch('./life_debug.wasm').then(response =>
       response.arrayBuffer()
     ).then(bytes =>
       WebAssembly.instantiate(bytes, { console, Math })
@@ -35,6 +35,15 @@
       canvas.width = wasm.WIDTH;
       canvas.height = wasm.HEIGHT;
       wasm.init();
+
+      // attach interaction listeners
+      canvas.onmousemove = ({ offsetX, offsetY }) => {
+        const { width, height } = canvas.getBoundingClientRect();
+        wasm.set_mouse_position(offsetX, offsetY, width, height);
+      };
+      canvas.onmousedown = () =>  wasm.set_mouse_state(1);
+      canvas.onmouseup = () =>  wasm.set_mouse_state(0);
+      canvas.onmouseleave = () =>  wasm.set_mouse_state(10);
 
       // get reference to canvas image data in wasm's linear memory
       const canvasData = new Uint8Array(
