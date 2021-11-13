@@ -13,7 +13,7 @@
       width: 100vmin;
       max-width: 1000px;
       object-fit: contain;
-      touch-action: pinch-zoom;
+      touch-action: none;
       cursor: pointer;
 
       /* default is to smooth edges of pixels on canvas */
@@ -38,14 +38,23 @@
       canvas.height = wasm.HEIGHT;
       wasm.init();
 
-      // attach interaction listeners
+      // attach desktop interaction listeners
       canvas.onmousemove = ({ offsetX, offsetY }) => {
         const { width, height } = canvas.getBoundingClientRect();
         wasm.set_mouse_position(offsetX, offsetY, width, height);
       };
-      canvas.onmousedown = () =>  wasm.set_mouse_state(1);
-      canvas.onmouseup = () =>  wasm.set_mouse_state(0);
-      canvas.onmouseleave = () =>  wasm.set_mouse_state(10);
+      canvas.onmouseup = () => wasm.set_mouse_state(0);
+      canvas.onmousedown = () => wasm.set_mouse_state(1);
+      canvas.onmouseleave = () => wasm.set_mouse_state(0);
+
+      // attach mobile interaction listeners
+      canvas.ontouchmove = ({ touches }) => {
+        const { clientX, clientY } = touches[touches.length - 1];
+        const { width, height } = canvas.getBoundingClientRect();
+        wasm.set_mouse_position(clientX || 0, clientY || 0, width, height);
+      };
+      canvas.ontouchstart = () => wasm.set_mouse_state(1);
+      canvas.ontouchend = () => wasm.set_mouse_state(0);
 
       // get reference to canvas image data in wasm's linear memory
       const canvasData = new Uint8Array(
