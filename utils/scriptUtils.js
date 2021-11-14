@@ -97,9 +97,20 @@ const optimizeCb = async (directoryPath, fileName, fn, options = {}) => {
   }
 }
 
+// auto update bytes tally in markdown file
+const updateBytes = async () => {
+  const readMePath = './README.md';
+  const { size } = await asyncFs.stat('src/life/life_optimized.wasm');
+  const readMe = (await asyncFs.readFile(readMePath)).toString();
+  const updatedReadme = readMe.replace(/(?<=Life \[)(.*)(?=\])/, `${size} bytes`);
+  await asyncFs.writeFile(readMePath, updatedReadme);
+
+}
+
 module.exports = {
   clean: async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, cleanCb),
   buildDebug: async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, buildCb, { debug: true }),
   buildNoDebug: async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, buildCb, { debug: false }),
   optimize: async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, optimizeCb),
+  updateBytes,
 };

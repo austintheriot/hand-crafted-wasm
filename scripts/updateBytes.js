@@ -1,0 +1,1 @@
+require('../utils/scriptUtils').updateBytes();

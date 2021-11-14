@@ -8,7 +8,8 @@
     "build:debug": "node ./scripts/buildDebug.js",
     "build:no-debug": "node ./scripts/buildNoDebug.js",
     "optimize": "node ./scripts/optimize.js",
-    "build": "npm run clean && npm run build:debug && npm run build:no-debug && npm run optimize",
+    "update-bytes": "node ./scripts/updateBytes.js",
+    "build": "npm run clean && npm run build:debug && npm run build:no-debug && npm run optimize && npm run update-bytes",
     "test": "npm run build && jest --watch"
   },
   "repository": {
