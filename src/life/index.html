@@ -53,7 +53,7 @@
   </div>
   <canvas></canvas>
   <script>
-    fetch('./life_debug.wasm').then(response =>
+    fetch('./life_optimized.wasm').then(response =>
       response.arrayBuffer()
     ).then(bytes =>
       WebAssembly.instantiate(bytes, { console, Math })
