@@ -320,50 +320,30 @@
         )
       )
 
-      ;; teal
-      (if (i32.gt_u (local.get $cell_value) (i32.const 240))
-        (then
-          (local.set $r (i32.div_u (i32.mul (local.get $cell_value) (i32.const 1)) (i32.const 4)))
-          (local.set $g (i32.div_u (i32.mul (local.get $cell_value) (i32.const 2)) (i32.const 5)))
-          (local.set $b (i32.div_u (i32.mul (local.get $cell_value) (i32.const 2)) (i32.const 5)))
-          (br $block)
-        )
-      )
-
-      ;; muted teal
-      (if (i32.gt_u (local.get $cell_value) (i32.const 220))
-        (then
-          (local.set $r (i32.div_u (local.get $cell_value) (i32.const 5)))
-          (local.set $g (i32.div_u (local.get $cell_value) (i32.const 4)))
-          (local.set $b (i32.div_u (local.get $cell_value) (i32.const 3)))
-          (br $block)
-        )
-      )
-
       ;; blue
-      (if (i32.gt_u (local.get $cell_value) (i32.const 190))
+      (if (i32.gt_u (local.get $cell_value) (i32.const 245))
         (then
-          (local.set $r (i32.div_u (local.get $cell_value) (i32.const 6)))
-          (local.set $g (i32.div_u (local.get $cell_value) (i32.const 6)))
-          (local.set $b (i32.div_u (local.get $cell_value) (i32.const 3)))
+          (local.set $r (i32.div_u (local.get $cell_value) (i32.const 30)))
+          (local.set $g (i32.div_u (local.get $cell_value) (i32.const 10)))
+          (local.set $b (i32.div_u (i32.mul (local.get $cell_value) (i32.const 7)) (i32.const 8)))
           (br $block)
         )
       )
 
-      ;; dark blue
-      (if (i32.gt_u (local.get $cell_value) (i32.const 85))
+      ;; teal
+      (if (i32.gt_u (local.get $cell_value) (i32.const 235))
         (then
-          (local.set $r (i32.div_u (local.get $cell_value) (i32.const 6)))
-          (local.set $g (i32.div_u (local.get $cell_value) (i32.const 6)))
-          (local.set $b (i32.div_u (local.get $cell_value) (i32.const 4)))
+          (local.set $r (i32.const 0))
+          (local.set $g (i32.div_u (i32.mul (local.get $cell_value) (i32.const 5)) (i32.const 7)))
+          (local.set $b (i32.div_u (i32.mul (local.get $cell_value) (i32.const 6)) (i32.const 7)))
           (br $block)
         )
       )
 
-      ;; gray
-      (local.set $r (i32.div_u (local.get $cell_value) (i32.const 6)))
-      (local.set $g (i32.div_u (local.get $cell_value) (i32.const 6)))
-      (local.set $b (i32.div_u (local.get $cell_value) (i32.const 6)))
+      ;; muted blue
+      (local.set $r (i32.div_u (local.get $cell_value) (i32.const 10)))
+      (local.set $g (i32.div_u (local.get $cell_value) (i32.const 4)))
+      (local.set $b (i32.div_u (i32.mul (local.get $cell_value) (i32.const 3)) (i32.const 5)))
     )
 
     ;; update canvas pixel data
