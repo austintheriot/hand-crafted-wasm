@@ -30,10 +30,6 @@
       justify-content: space-between;
       gap: 1rem;
     }
-
-    .variation {
-      width: fit-content;
-    }
   </style>
 </head>
 
@@ -58,7 +54,7 @@
     ).then(bytes =>
       WebAssembly.instantiate(bytes, { console, Math })
     ).then(({ instance: { exports: wasm } }) => {
-      // setup canvas dimensions
+      // setup canvas & data
       const canvas = document.querySelector('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = wasm.WIDTH;
