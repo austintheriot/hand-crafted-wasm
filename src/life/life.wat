@@ -30,6 +30,8 @@
   (global $MOUSE_STATE (mut i32) (i32.const 0))
   ;; 0 = pause, 1 = play
   (global $PLAY_STATE (mut i32) (i32.const 1))
+  ;; 0 = standard
+  (global $VARIATION (mut i32) (i32.const 0))
 
   ;; canvas data
   (global $BPP (export "BPP") i32 (i32.const 4)) ;; bytes per pixel
@@ -102,6 +104,10 @@
 
   (func (export "set_play_state") (param $play_state i32)
     (global.set $PLAY_STATE (local.get $play_state))   
+  )
+
+  (func (export "set_variation") (param $variation i32)
+    (global.set $VARIATION (local.get $variation))   
   )
 
   (func (export "set_mouse_position") (param $x f32)  (param $y f32) (param $width f32) (param $height f32)
@@ -490,6 +496,116 @@
     local.get $num_live_neighbors
   )
 
+  (func $get_should_be_alive (param $current_cell_is_alive i32) (param $num_live_neighbors i32) (result i32)
+    (if 
+      (i32.and
+        (i32.eq (global.get $VARIATION) (i32.const 0))
+        (i32.or 
+          ;; alive and 2 or 3 neighbors
+          (i32.and 
+            (local.get $current_cell_is_alive)
+            (i32.or 
+              (i32.eq 
+                (local.get $num_live_neighbors)
+                (i32.const 2)
+              )
+              (i32.eq 
+                (local.get $num_live_neighbors)
+                (i32.const 3)
+              )
+            ) 
+          )
+          ;; dead with 3 neighbors
+          (i32.eq 
+            (local.get $num_live_neighbors)
+            (i32.const 3)
+          )
+        )
+      )
+      (then (return (i32.const 1)))
+    )
+
+    (if 
+      (i32.and
+        (i32.eq (global.get $VARIATION) (i32.const 1))
+        (i32.or 
+          (i32.and 
+            ;; alive and 2 or 4 neighbors
+            (local.get $current_cell_is_alive)
+            (i32.or 
+              (i32.eq 
+                (local.get $num_live_neighbors)
+                (i32.const 2)
+              )
+              (i32.eq 
+                (local.get $num_live_neighbors)
+                (i32.const 4)
+              )
+            ) 
+          )
+          ;; dead with 3 neighbors
+          (i32.eq 
+            (local.get $num_live_neighbors)
+            (i32.const 3)
+          )
+        )
+      )
+      (then (return (i32.const 1)))
+    )
+
+    (if 
+      (i32.and
+        (i32.eq (global.get $VARIATION) (i32.const 2))
+        (i32.or 
+          (i32.and 
+            ;; alive with 1 or 2 neighbors
+            (local.get $current_cell_is_alive)
+            (i32.or 
+              (i32.eq 
+                (local.get $num_live_neighbors)
+                (i32.const 1)
+              )
+              (i32.eq 
+                (local.get $num_live_neighbors)
+                (i32.const 2)
+              )
+            ) 
+          )
+          ;; dead with 1 neighbor
+          (i32.eq 
+            (local.get $num_live_neighbors)
+            (i32.const 1)
+          )
+        )
+      )
+      (then (return (i32.const 1)))
+    )
+
+     (if 
+      (i32.and
+        (i32.eq (global.get $VARIATION) (i32.const 3))
+        (i32.or 
+          (i32.and 
+            ;; alive if >5 neighbors
+            (local.get $current_cell_is_alive)
+            (i32.gt_s 
+              (local.get $num_live_neighbors)
+              (i32.const 5)
+            )
+          )
+          ;; dead with <5 neighbors
+          (i32.lt_s 
+            (local.get $num_live_neighbors)
+            (i32.const 5)
+          )
+        )
+      )
+      (then (return (i32.const 1)))
+    )
+
+    (return (i32.const 0))
+  )
+
   (; The rules of Conway's Game of Life:
   1. Any live cell with two or three live neighbours survives.
   2. Any dead cell with three live neighbours becomes a live cell.
@@ -519,27 +635,8 @@
       (else (local.set $cell_value (global.get $DEAD)))
     )
 
-    (if (i32.or 
-          ;; alive and 2 or 3 neighbors
-          (i32.and 
-            (local.get $current_cell_is_alive)
-            (i32.or 
-              (i32.eq 
-                (local.get $num_live_neighbors)
-                (i32.const 2)
-              )
-              (i32.eq 
-                (local.get $num_live_neighbors)
-                (i32.const 3)
-              )
-            ) 
-          )
-          ;; dead with 3 neighbors
-          (i32.eq 
-            (local.get $num_live_neighbors)
-            (i32.const 3)
-          )
-        )
+    (if (call $get_should_be_alive (local.get $current_cell_is_alive) (local.get $num_live_neighbors))
+
         ;; Any live cell with two or three live neighbours survives.
         ;; Any dead cell with three live neighbours becomes a live cell.
         (then (local.set $next_life_state (global.get $ALIVE)))
