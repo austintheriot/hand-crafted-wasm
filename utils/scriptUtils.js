@@ -102,7 +102,7 @@ const updateBytes = async () => {
   const readMePath = './README.md';
   const { size } = await asyncFs.stat('src/life/life_optimized.wasm');
   const readMe = (await asyncFs.readFile(readMePath)).toString();
-  const updatedReadme = readMe.replace(/(?<=Life \[)(.*)(?=\])/, `${size} bytes`);
+  const updatedReadme = readMe.replace(/(?<=Life:)(.*)(?=bytes)/, ` ${size} `);
   await asyncFs.writeFile(readMePath, updatedReadme);
 
 }

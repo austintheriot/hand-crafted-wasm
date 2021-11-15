@@ -1,7 +1,11 @@
 # Raw WebAssembly
 
-## Conway's Game Of Life [1273 bytes]
+## Conway's Game Of Life: 1275 bytes
 
-An implementation of the classic [Conway's Game Of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) in handwritten WebAssembly.
+An implementation of the classic Conway's Game Of Life, written entirely in hand-crafted WebAssembly.
 
-[Demo](https://austintheriot.github.io/raw-wasm/src/life/)
+[See live demo](https://austintheriot.github.io/raw-wasm/src/life/)
+
+## More
+
+More demos coming soon!
