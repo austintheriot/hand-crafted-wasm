@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+
+<head>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      margin: 0;
+      position: 'relative';
+    }
+
+    canvas {
+      width: 100vmin;
+      max-width: 1000px;
+      object-fit: contain;
+      touch-action: none;
+
+      /* default is to smooth edges of pixels on canvas */
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+  </style>
+   <script type="text/javascript" charset="utf-8" src="./noise_3d.js"></script>
+</head>
+
+<body>
+  <canvas></canvas>
+  <script>
+   fetch('./noise_debug.wasm').then((res) => res.arrayBuffer())
+    .then((bytes) => {
+      return WebAssembly.instantiate(bytes, { 
+        noise: { noise_3d: noise }, console 
+      });
+    }).then(({ instance: { exports: wasm } }) => {
+      // setup canvas & data
+      const canvas = document.querySelector('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = wasm.WIDTH;
+      canvas.height = wasm.HEIGHT;
+      wasm.init();
+
+      // get reference to canvas image data in wasm's linear memory
+      const canvasData = new Uint8Array(
+        wasm.memory.buffer,
+        wasm.CANVAS_MEMORY_OFFSET,
+        wasm.CANVAS_MEMORY_LENGTH
+      );
+
+      // transform wasm linear memory to image data
+      const imageData = ctx.createImageData(wasm.WIDTH, wasm.HEIGHT);
+      imageData.data.set(canvasData);
+      ctx.putImageData(imageData, 0, 0);
+
+      // animate
+      (async function animate() {
+        wasm.update();
+        imageData.data.set(canvasData);
+        ctx.putImageData(imageData, 0, 0);
+        requestAnimationFrame(animate);
+      })();
+    }).catch((e) => console.error(e));
+  </script>
+</body>
