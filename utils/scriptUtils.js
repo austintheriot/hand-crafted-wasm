@@ -100,9 +100,11 @@ const optimizeCb = async (directoryPath, fileName, fn, options = {}) => {
 // auto update bytes tally in markdown file
 const updateBytes = async () => {
   const readMePath = './README.md';
-  const { size } = await asyncFs.stat('src/life/life_optimized.wasm');
+  const { size: lifeSize } = await asyncFs.stat('src/life/life_optimized.wasm');
+  const { size: noiseSize } = await asyncFs.stat('src/noise/noise_optimized.wasm');
   const readMe = (await asyncFs.readFile(readMePath)).toString();
-  const updatedReadme = readMe.replace(/(?<=Life:)(.*)(?=bytes)/, ` ${size} `);
+  let updatedReadme = readMe.replace(/(?<=Life:)(.*)(?=bytes)/, ` ${lifeSize} `);
+  updatedReadme = readMe.replace(/(?<=Noise:)(.*)(?=bytes)/, ` ${noiseSize} `);
   await asyncFs.writeFile(readMePath, updatedReadme);
 
 }
