@@ -11,7 +11,7 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   (memory (export "memory") 9)
-  (type $OneParameter (func (param i32))) 
+  (type $ForEachCallback (func (param i32))) 
   (table funcref (elem $update_cell $draw_cell))
   (global $UPDATE_CELL i32 (i32.const 0))
   (global $DRAW_CELL i32 (i32.const 1))
@@ -21,8 +21,8 @@
   (global $HEIGHT (export "HEIGHT") i32 (i32.const 100))
   (global $NUM_CELLS (mut i32) (i32.const 0))
   (global $FADE_DECREMENT i32 (i32.const 1))
-  (global $DIVIDE_COORDINATE_FACTOR f64 (f64.const 20)) ;; how gradual the noise appears
-  (global $TIME_INCREMENT f64 (f64.const 0.0015))
+  (global $DIVIDE_COORDINATE_FACTOR f64 (f64.const 30)) ;; how gradual the noise appears
+  (global $TIME_INCREMENT f64 (f64.const 0.004))
 
   ;; cell data
   (global $CELL_MEMORY_OFFSET i32 (i32.const 0))
@@ -151,22 +151,20 @@
     (i32.store8 (i32.add (local.get $pixel_mem_index) (i32.const 2)) (local.get $cell_value))
     (i32.store8 (i32.add (local.get $pixel_mem_index) (i32.const 3)) (i32.const 0xFF))
   )
- 
-  (func $iterate_through_cells (param $func_ref i32)
+
+  ;; iterate through every pixel up to LENGTH and call given function
+  (func $for_each (param $func_ref i32)
     (local $i i32)
-    (local.set $i (i32.const 0))
-
     (loop $loop
-      ;; perform indicated callback
-      (call_indirect (type $OneParameter) (local.get $i) (local.get $func_ref))
-
       ;; loop until reaching the end of cells
-      (if (i32.eq (local.get $i) (i32.sub (global.get $NUM_CELLS)) (i32.const 1))
-        (then return)
-        (else 
+      (if (i32.lt_s (local.get $i) (global.get $NUM_CELLS))
+        (then
+          ;; perform indicated callback
+          (call_indirect (type $ForEachCallback) (local.get $i) (local.get $func_ref))
           (local.set $i (i32.add (local.get $i) (i32.const 1)))
           br $loop
         )
+        (else return)
       )
     )
   )
@@ -187,7 +185,7 @@
   ;; update state on every tick
   (func $update (export "update")
     (call $increment_time)
-    (call $iterate_through_cells (global.get $UPDATE_CELL))
-    (call $iterate_through_cells (global.get $DRAW_CELL))
+    (call $for_each (global.get $UPDATE_CELL))
+    (call $for_each (global.get $DRAW_CELL))
   )
 )
