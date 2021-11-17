@@ -26,7 +26,7 @@
 <body>
   <canvas></canvas>
   <script>
-   fetch('./noise_debug.wasm').then((res) => res.arrayBuffer())
+   fetch('./noise_field_optimized.wasm').then((res) => res.arrayBuffer())
     .then((bytes) => {
       return WebAssembly.instantiate(bytes, { 
         noise: { noise_3d: noise }, console 

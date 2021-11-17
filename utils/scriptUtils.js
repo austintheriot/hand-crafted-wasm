@@ -101,7 +101,7 @@ const optimizeCb = async (directoryPath, fileName, fn, options = {}) => {
 const updateBytes = async () => {
   const readMePath = './README.md';
   const { size: lifeSize } = await asyncFs.stat('src/life/life_optimized.wasm');
-  const { size: noiseSize } = await asyncFs.stat('src/noise/noise_optimized.wasm');
+  const { size: noiseSize } = await asyncFs.stat('src/noise_field/noise_field_optimized.wasm');
   const readMe = (await asyncFs.readFile(readMePath)).toString();
   let updatedReadme = readMe.replace(/(?<=Life:)(.*)(?=bytes)/, ` ${lifeSize} `);
   updatedReadme = readMe.replace(/(?<=Noise:)(.*)(?=bytes)/, ` ${noiseSize} `);

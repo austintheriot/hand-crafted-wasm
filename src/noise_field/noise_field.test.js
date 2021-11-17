@@ -1,7 +1,7 @@
 /** @jest-environment node */
 const { setupWasmInstance } = require('../../utils/wasmUtils.js');
 
-const MODULE_NAME = 'noise';
+const MODULE_NAME = 'noise_field';
 
 describe(`Test ${MODULE_NAME}`, () => {
   let wasm;

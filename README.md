@@ -10,7 +10,7 @@ An implementation of the classic Conway's Game Of Life, written entirely in hand
 
 A rasterized perlin noise field rendered in WebAssembly. Uses the P5.js perlin noise implementation, but perhaps I'll re-implement their Perlin noise function in pure WebAssembly as well soon.
 
-[See live demo](https://austintheriot.github.io/raw-wasm/src/noise/)
+[See live demo](https://austintheriot.github.io/raw-wasm/src/noise_field/)
 
 ## More
 
