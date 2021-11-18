@@ -106,7 +106,7 @@
     (if (i32.gt_s (local.get $grow_memory) (i32.const 0))
       (then 
         (memory.grow (local.get $grow_memory))
-        call $log
+        drop
       )
     )
   )
@@ -397,10 +397,10 @@
     (local.set $pixel_mem_index (call $cell_number_to_pixel_mem_index (local.get $cell_num)))
     (local.set $cell_value (i32.load8_u (local.get $cell_mem_index)))
 
-    ;; update canvas pixel data
-    (i32.store8 (local.get $pixel_mem_index) (local.get $cell_value))
-    (i32.store8 (i32.add (local.get $pixel_mem_index) (i32.const 1)) (local.get $cell_value))
-    (i32.store8 (i32.add (local.get $pixel_mem_index) (i32.const 2)) (local.get $cell_value))
+    ;; update canvas pixel data - draw live circle as black and dead ones as black
+    (i32.store8 (local.get $pixel_mem_index) (i32.sub (i32.const 255) (local.get $cell_value)))
+    (i32.store8 (i32.add (local.get $pixel_mem_index) (i32.const 1)) (i32.sub (i32.const 255) (local.get $cell_value)))
+    (i32.store8 (i32.add (local.get $pixel_mem_index) (i32.const 2)) (i32.sub (i32.const 255) (local.get $cell_value)))
     (i32.store8 (i32.add (local.get $pixel_mem_index) (i32.const 3)) (i32.const 0xFF))
   )
 
