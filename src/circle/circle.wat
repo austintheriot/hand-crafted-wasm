@@ -22,8 +22,8 @@
   (global $HEIGHT (export "HEIGHT") i32 (i32.const 500))
   (global $NUM_CELLS (mut i32) (i32.const 0))
   (global $DIVIDE_COORDINATE_FACTOR f64 (f64.const 30)) ;; how gradual the noise appears
-  (global $FADE_DECREMENT i32 (i32.const 1))
-  (global $CIRCLE_INCREMENT i32 (i32.const 100))
+  (global $FADE_DECREMENT i32 (i32.const 5))
+  (global $CIRCLE_INCREMENT i32 (i32.const 150))
   (global $TIME_INCREMENT f64 (f64.const 0.009))
 
   ;; cell data
@@ -365,18 +365,20 @@
   (func $update_cell (param $cell_num i32)
     (local $cell_mem_index i32)
     (local $cell_value i32)
-    (local $decremented_cell_value i32)
 
     ;; convert cell_num to memory index of cell value
     (local.set $cell_mem_index (call $cell_number_to_cell_mem_index (local.get $cell_num)))
-
-    ;; get current state of cell
     (local.set $cell_value (i32.load8_u (local.get $cell_mem_index)))
-    (local.set $decremented_cell_value (i32.sub (local.get $cell_value) (global.get $FADE_DECREMENT)))
 
-    ;; decrement cell value
-    (if (i32.gt_s (local.get $decremented_cell_value) (i32.const 0))
-      (then (local.set $cell_value (local.get $decremented_cell_value)))
+    ;; decrease cell life
+    (local.set $cell_value 
+      (call $i32_max 
+        (i32.sub 
+          (local.get $cell_value) 
+          (global.get $FADE_DECREMENT)
+        ) 
+        (i32.const 0)
+      )
     )
 
     ;; set life state of the current actual cell
