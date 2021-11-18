@@ -1,8 +1,9 @@
 const path = require('path');
 const _wabt = require('wabt');
 const { promises: asyncFs, ...fs } = require('fs');
-const { DEFAULT_ROOT_DIR } = require('./wasmUtils');
 const binaryen = require('binaryen');
+
+const DEFAULT_ROOT_DIR = 'src';
 
 const isWasm = (pathString) => path.extname(pathString) === '.wasm';
 
@@ -99,14 +100,23 @@ const optimizeCb = async (directoryPath, fileName, fn, options = {}) => {
 
 // auto update bytes tally in markdown file
 const updateBytes = async () => {
-  const readMePath = './README.md';
-  const { size: lifeSize } = await asyncFs.stat('src/life/life_optimized.wasm');
-  const { size: noiseSize } = await asyncFs.stat('src/noise_field/noise_field_optimized.wasm');
-  const readMe = (await asyncFs.readFile(readMePath)).toString();
-  let updatedReadme = readMe.replace(/(?<=Noise Field:)(.*)(?=bytes)/, ` ${noiseSize} `);
-  updatedReadme = readMe.replace(/(?<=Life:)(.*)(?=bytes)/, ` ${lifeSize} `);
-  await asyncFs.writeFile(readMePath, updatedReadme);
+  try {
+    const readMePath = './README.md';
+    const { size: lifeSize } = await asyncFs.stat('src/life/life_optimized.wasm');
+    const { size: perlinNoiseSize } = await asyncFs.stat('src/perlin_noise/perlin_noise_optimized.wasm');
+    const { size: noiseFieldSize } = await asyncFs.stat('src/noise_field/noise_field_optimized.wasm');
+    console.log({ lifeSize, perlinNoiseSize, noiseFieldSize })
 
+    const readMeBytes = await asyncFs.readFile(readMePath);
+    const readMe = readMeBytes.toString();
+    const updatedReadme = readMe.replace(/(?<=Noise Field:)(.*)(?=bytes)/, ` ${perlinNoiseSize + noiseFieldSize} `)
+      .replace(/(?<=Life:)(.*)(?=bytes)/, ` ${lifeSize} `);
+
+    console.log({ updatedReadme });
+    await asyncFs.writeFile(readMePath, updatedReadme);
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 module.exports = {
@@ -115,4 +125,5 @@ module.exports = {
   buildNoDebug: async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, buildCb, { debug: false }),
   optimize: async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, optimizeCb),
   updateBytes,
+  DEFAULT_ROOT_DIR,
 };

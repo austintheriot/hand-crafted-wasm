@@ -1,8 +1,6 @@
 const { readFileSync } = require("fs");
-const { clean, buildDebug, buildNoDebug, optimize } = require("./scriptUtils");
+const { clean, buildDebug, buildNoDebug, optimize, DEFAULT_ROOT_DIR } = require("./scriptUtils");
 const path = require('path');
-
-const DEFAULT_ROOT_DIR = 'src';
 
 const setupWasmInstance = async (pathToWasm, importObject) => {
   // only clean and build the files in the directory that this function is being called

@@ -1,7 +1,7 @@
 # Raw WebAssembly
 
 
-## Perlin Noise Field: 425 bytes
+## Perlin Noise Field: 1083 bytes
 
 A rasterized perlin noise field rendered in WebAssembly. Uses a custom all-WebAssembly port of processing/p5.js' perlin noise implementation.
 
