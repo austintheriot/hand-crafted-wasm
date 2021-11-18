@@ -239,6 +239,37 @@
     )
   )
 
+  (func $wrap_around (param $n f64) (param $min f64) (param $max f64) (result f64)
+    (f64.mul
+      (f64.add
+        (f64.div
+          ;; map cosine's output back to range
+          (call $map 
+            (call $cos
+              ;; map number from 0 to 2PI
+              (call $map
+                (local.get $n)
+                (local.get $min)
+                (local.get $max)
+                (f64.const 0)
+                (f64.mul (global.get $PI) (f64.const 2))
+                (i32.const 1)
+              )
+            )
+            (f64.const 0)
+            (f64.const 1)
+            (local.get $min)
+            (local.get $max)
+            (i32.const 0)
+          )
+          (f64.const 2)
+        )
+        (f64.const 1)
+      )
+      (f64.const -1)
+    )
+  )
+
   (func $update_circle (export "update_circle")
     (local $i f64)
     (local $angle f64)
@@ -302,7 +333,11 @@
               (local.get $CIRCLE_BASE_RADIUS)
               (call $perlin_noise 
                 (f64.mul
-                  (local.get $i)
+                  (call $wrap_around
+                    (local.get $i)
+                    (f64.const 0)
+                    (local.get $SAMPLES)
+                  )
                   (f64.const 0.01)
                 )
                 (global.get $TIME)
