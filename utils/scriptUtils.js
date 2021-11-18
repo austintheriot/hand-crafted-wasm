@@ -105,14 +105,10 @@ const updateBytes = async () => {
     const { size: lifeSize } = await asyncFs.stat('src/life/life_optimized.wasm');
     const { size: perlinNoiseSize } = await asyncFs.stat('src/perlin_noise/perlin_noise_optimized.wasm');
     const { size: noiseFieldSize } = await asyncFs.stat('src/noise_field/noise_field_optimized.wasm');
-    console.log({ lifeSize, perlinNoiseSize, noiseFieldSize })
-
     const readMeBytes = await asyncFs.readFile(readMePath);
     const readMe = readMeBytes.toString();
     const updatedReadme = readMe.replace(/(?<=Noise Field:)(.*)(?=bytes)/, ` ${perlinNoiseSize + noiseFieldSize} `)
       .replace(/(?<=Life:)(.*)(?=bytes)/, ` ${lifeSize} `);
-
-    console.log({ updatedReadme });
     await asyncFs.writeFile(readMePath, updatedReadme);
   } catch (e) {
     console.error(e);
