@@ -1,7 +1,7 @@
 /** @jest-environment node */
 const { setupWasmInstance } = require('../../utils/wasmUtils.js');
 
-const MODULE_NAME = 'circle';
+const MODULE_NAME = 'chaos_circle';
 
 describe(`Test ${MODULE_NAME}`, () => {
   let wasm;

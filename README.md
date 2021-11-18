@@ -1,6 +1,5 @@
 # Raw WebAssembly
 
-
 ## Perlin Noise Field: 1083 bytes
 
 A rasterized perlin noise field rendered in WebAssembly. Uses a custom all-WebAssembly port of processing/p5.js' perlin noise implementation.
@@ -16,6 +15,14 @@ An implementation of the classic Conway's Game Of Life, hand written in WebAssem
 [See live demo](https://austintheriot.github.io/raw-wasm/src/life/)
 
 ![Conway's Game of Life](/images/conways_game_of_life.png)
+
+## Chaos Circle: 1898 bytes
+
+An ever-contracting and expanding flower shape. Uses a custom all-WebAssembly port of processing/p5.js' perlin noise implementation.
+
+[See live demo](https://austintheriot.github.io/raw-wasm/src/chaos_circle/)
+
+![Chaos Circle](/images/chaos_circle.png)
 
 ## More
 
