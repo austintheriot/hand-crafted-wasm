@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <head>
   <style>
     body {
@@ -20,44 +19,47 @@
       image-rendering: crisp-edges;
     }
   </style>
-   <script type="text/javascript" charset="utf-8" src="./noise_3d.js"></script>
 </head>
-
 <body>
   <canvas></canvas>
   <script>
-   fetch('./noise_field_optimized.wasm').then((res) => res.arrayBuffer())
-    .then((bytes) => {
-      return WebAssembly.instantiate(bytes, { 
-        noise: { noise_3d: noise }, console 
-      });
-    }).then(({ instance: { exports: wasm } }) => {
-      // setup canvas & data
-      const canvas = document.querySelector('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = wasm.WIDTH;
-      canvas.height = wasm.HEIGHT;
-      wasm.init();
+    Promise.all([
+      fetch('../perlin_noise/perlin_noise_optimized.wasm'),
+      fetch('./noise_field_optimized.wasm')
+    ]).then(([res1, res2]) => Promise.all([
+      res1.arrayBuffer(),
+      res2.arrayBuffer()
+    ]))
+      .then(async ([bytes1, bytes2]) => {
+        const { instance: { exports: perlin_noise_exports }} = await WebAssembly.instantiate(bytes1, { console, Math });
+        return WebAssembly.instantiate(bytes2, { noise: { noise_3d: perlin_noise_exports.perlin_noise }, console });
+      }).then(({ instance: { exports: wasm } }) => {
+        // setup canvas & data
+        const canvas = document.querySelector('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = wasm.WIDTH;
+        canvas.height = wasm.HEIGHT;
+        wasm.init();
 
-      // get reference to canvas image data in wasm's linear memory
-      const canvasData = new Uint8Array(
-        wasm.memory.buffer,
-        wasm.CANVAS_MEMORY_OFFSET,
-        wasm.CANVAS_MEMORY_LENGTH
-      );
+        // get reference to canvas image data in wasm's linear memory
+        const canvasData = new Uint8Array(
+          wasm.memory.buffer,
+          wasm.CANVAS_MEMORY_OFFSET,
+          wasm.CANVAS_MEMORY_LENGTH
+        );
 
-      // transform wasm linear memory to image data
-      const imageData = ctx.createImageData(wasm.WIDTH, wasm.HEIGHT);
-      imageData.data.set(canvasData);
-      ctx.putImageData(imageData, 0, 0);
-
-      // animate
-      (async function animate() {
-        wasm.update();
+        // transform wasm linear memory to image data
+        const imageData = ctx.createImageData(wasm.WIDTH, wasm.HEIGHT);
         imageData.data.set(canvasData);
         ctx.putImageData(imageData, 0, 0);
-        requestAnimationFrame(animate);
-      })();
-    }).catch((e) => console.error(e));
+
+        // animate
+        (async function animate() {
+          wasm.update();
+          imageData.data.set(canvasData);
+          ctx.putImageData(imageData, 0, 0);
+          requestAnimationFrame(animate);
+        })();
+      }).catch((e) => console.error(e));
   </script>
 </body>

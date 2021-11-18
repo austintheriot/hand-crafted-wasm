@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<head></head>
+<body>
+  <canvas></canvas>
+  <script>
+    fetch('./perlin_noise_debug.wasm').then((res) => res.arrayBuffer())
+      .then((bytes) => {
+        return WebAssembly.instantiate(bytes, { Math, console });
+      }).then(({ instance: { exports: wasm } }) => {
+        console.log(wasm.perlin_noise(-1237.78, 182, 12981.127));
+      }).catch((e) => console.error(e));
+  </script>
+</body>

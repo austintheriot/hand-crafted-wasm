@@ -103,8 +103,8 @@ const updateBytes = async () => {
   const { size: lifeSize } = await asyncFs.stat('src/life/life_optimized.wasm');
   const { size: noiseSize } = await asyncFs.stat('src/noise_field/noise_field_optimized.wasm');
   const readMe = (await asyncFs.readFile(readMePath)).toString();
-  let updatedReadme = readMe.replace(/(?<=Life:)(.*)(?=bytes)/, ` ${lifeSize} `);
-  updatedReadme = readMe.replace(/(?<=Noise:)(.*)(?=bytes)/, ` ${noiseSize} `);
+  let updatedReadme = readMe.replace(/(?<=Noise Field:)(.*)(?=bytes)/, ` ${noiseSize} `);
+  updatedReadme = readMe.replace(/(?<=Life:)(.*)(?=bytes)/, ` ${lifeSize} `);
   await asyncFs.writeFile(readMePath, updatedReadme);
 
 }
