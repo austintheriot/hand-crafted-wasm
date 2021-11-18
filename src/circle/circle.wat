@@ -18,12 +18,12 @@
   (global $DRAW_CELL i32 (i32.const 1))
 
   ;; constant globals
-  (global $WIDTH (export "WIDTH") i32 (i32.const 500))
-  (global $HEIGHT (export "HEIGHT") i32 (i32.const 500))
+  (global $WIDTH (export "WIDTH") i32 (i32.const 1000))
+  (global $HEIGHT (export "HEIGHT") i32 (i32.const 1000))
   (global $NUM_CELLS (mut i32) (i32.const 0))
   (global $DIVIDE_COORDINATE_FACTOR f64 (f64.const 30)) ;; how gradual the noise appears
-  (global $FADE_DECREMENT i32 (i32.const 5))
-  (global $CIRCLE_INCREMENT i32 (i32.const 150))
+  (global $FADE_DECREMENT i32 (i32.const 2))
+  (global $CIRCLE_INCREMENT i32 (i32.const 250))
   (global $TIME_INCREMENT f64 (f64.const 0.009))
 
   ;; cell data
