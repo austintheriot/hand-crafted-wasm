@@ -1,2 +1,5 @@
 node_modules
-**/*.DS_Store
+.DS_Store
+dist
+dist-ssr
+*.local
