@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+
+<head>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      margin: 0;
+      position: 'relative';
+      background-color: black;
+    }
+
+    canvas {
+      width: 100vmin;
+      max-width: 1000px;
+      object-fit: contain;
+      touch-action: none;
+      /* for debugging */
+      background-color: black;
+      cursor: grab;
+
+      /* default is to smooth edges of pixels on canvas */
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas></canvas>
+  <script>
+    let prevDragY = { current: 0 };
+    let prevDragX = { current: 0 };
+
+    let prevTouchY = { current: 0 };
+    let prevTouchX = { current: 0 };
+
+    let mouseDown = false;
+    Promise.all([
+      fetch('../perlin_noise/perlin_noise_optimized.wasm'),
+      fetch('./lorenz_system_optimized.wasm')
+    ]).then(([res1, res2]) => Promise.all([
+      res1.arrayBuffer(),
+      res2.arrayBuffer()
+    ]))
+      .then(async ([bytes1, bytes2]) => {
+        const { instance: { exports: { perlin_noise } } } = await WebAssembly.instantiate(bytes1, { console, Math });
+        return WebAssembly.instantiate(bytes2, { noise: { perlin_noise }, Math, console });
+      }).then(({ instance: { exports: wasm } }) => {
+        // setup canvas & data
+        const canvas = document.querySelector('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = wasm.WIDTH;
+        canvas.height = wasm.HEIGHT;
+        wasm.init();
+
+        window.onkeydown = (e) => {
+          console.log(e)
+          if (e.key === 'ArrowLeft') wasm.add_x_theta(0.05);
+          else if (e.key === 'ArrowRight') wasm.add_x_theta(-0.05);
+
+          if (e.key === 'ArrowUp') wasm.mul_scale(1.1);
+          else if (e.key === 'ArrowDown') wasm.mul_scale(0.9);
+        }
+
+        window.ontouchstart = (e) => {
+          prevTouchY.current = e.touches[0]?.clientY;
+          prevTouchX.current = e.touches[0]?.clientX;
+        }
+
+        window.ontouchmove = (e) => {
+          const { width, height } = canvas.getBoundingClientRect();
+          const nextClientX = e.touches[0]?.clientX;
+          const nextClientY = e.touches[0]?.clientY;
+          const dx = nextClientX - prevTouchX.current;
+          const dy = nextClientY - prevTouchY.current;
+          prevTouchX.current = nextClientX;
+          prevTouchY.current = nextClientY;
+          const px = dx / width;
+          const py = dy / height;
+          wasm.add_x_theta(px * 5);
+          wasm.mul_scale(1 + py);
+        }
+
+        window.onmousedown = (e) => {
+          mouseDown = true;
+          prevDragX.current = e.clientX;
+          prevDragY.current = e.clientY;
+        }
+
+        window.onmousemove = (e) => {
+          if (!mouseDown) return;
+          const { width, height } = canvas.getBoundingClientRect();
+          const nextClientX = e.clientX;
+          const nextClientY = e.clientY;
+          const dx = nextClientX - prevDragX.current;
+          const dy = nextClientY - prevDragY.current;
+          prevDragX.current = nextClientX;
+          prevDragY.current = nextClientY;
+          const px = dx / width;
+          const py = dy / height;
+          wasm.add_x_theta(px * 10);
+          wasm.mul_scale(1 + py * 10);
+        }
+
+        window.onmouseup = (e) => mouseDown = false;
+        window.onmouseleave = (e) => mouseDown = false;
+
+        // get reference to canvas image data in wasm's linear memory
+        const canvasData = new Uint8Array(
+          wasm.memory.buffer,
+          wasm.CANVAS_MEMORY_OFFSET,
+          wasm.CANVAS_MEMORY_LENGTH
+        );
+
+        // transform wasm linear memory to image data
+        const imageData = ctx.createImageData(wasm.WIDTH, wasm.HEIGHT);
+        imageData.data.set(canvasData);
+        ctx.putImageData(imageData, 0, 0);
+
+        // animate
+        (async function animate() {
+          wasm.update();
+          imageData.data.set(canvasData);
+          ctx.putImageData(imageData, 0, 0);
+          requestAnimationFrame(animate);
+        })();
+      }).catch((e) => console.error(e));
+  </script>
+</body>

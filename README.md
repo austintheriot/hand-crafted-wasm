@@ -8,6 +8,15 @@ A rasterized perlin noise field rendered in WebAssembly. Uses a custom all-WebAs
 
 ![Perlin Noise](/images/perlin_noise.png)
 
+
+## 3D Particle Simulation - Lorenz System: 1200 bytes
+
+3D particle simulation of the Lorenz strange attractor using 30,000 particles. Use arrow keys or drag/touch the window to change the camera position. All physics/3d projection code was written from scratch in WebAssembly and was inspired by ssloy's tinyrenderer: https://github.com/ssloy/tinyrenderer
+
+[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/lorenz_system/)
+
+![Lorenz System](/images/lorenz_system.png)
+
 ## Conway's Game Of Life: 1240 bytes
 
 An implementation of the classic Conway's Game Of Life, hand written in WebAssembly.
