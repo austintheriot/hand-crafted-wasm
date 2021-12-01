@@ -108,6 +108,7 @@ const updateBytes = async () => {
     const { size: chaosCircleSize } = await asyncFs.stat('src/life/life_optimized.wasm');
     const { size: perlinNoiseSize } = await asyncFs.stat('src/perlin_noise/perlin_noise_optimized.wasm');
     const { size: noiseFieldSize } = await asyncFs.stat('src/noise_field/noise_field_optimized.wasm');
+    const { size: noiseWavesSize } = await asyncFs.stat('src/noise_waves/noise_waves_optimized.wasm');
     const { size: lorenzSystemSize } = await asyncFs.stat('src/lorenz_system/lorenz_system_optimized.wasm');
     const readMeBytes = await asyncFs.readFile(readMePath);
     const readMe = readMeBytes.toString();
@@ -115,6 +116,7 @@ const updateBytes = async () => {
       .replace(/(?<=Noise Field:)(.*)(?=bytes)/, ` ${perlinNoiseSize + noiseFieldSize} `)
       .replace(/(?<=Life:)(.*)(?=bytes)/, ` ${lifeSize} `)
       .replace(/(?<=Lorenz System:)(.*)(?=bytes)/, ` ${lorenzSystemSize} `)
+      .replace(/(?<=Noise Waves:)(.*)(?=bytes)/, ` ${noiseWavesSize} `)
       .replace(/(?<=Chaos Circle:)(.*)(?=bytes)/, ` ${perlinNoiseSize + chaosCircleSize} `);
     await asyncFs.writeFile(readMePath, updatedReadme);
   } catch (e) {

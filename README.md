@@ -25,6 +25,14 @@ An implementation of the classic Conway's Game Of Life, hand written in WebAssem
 
 ![Conway's Game of Life](/images/conways_game_of_life.png)
 
+## 3D Noise Waves: 1330 bytes
+
+3D particle waves. Use arrow keys or drag/touch the window to change the camera position. 
+
+[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/noise_waves)
+
+![Noise Waves](/images/noise_waves.png)
+
 ## Chaos Circle: 1898 bytes
 
 An ever-contracting and expanding flower shape. Uses a custom all-WebAssembly port of processing/p5.js' perlin noise implementation.
