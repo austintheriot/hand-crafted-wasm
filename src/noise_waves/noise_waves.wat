@@ -41,7 +41,7 @@
   (global $VERTEX_MEMORY_OFFSET (mut i32) (i32.const 0))
   (global $VERTEX_MEMORY_LENGTH (mut i32) (i32.const 0))
 
-  (global $VERTEX_MEMORY_COPY_OFFSET (mut i32) (i32.const 0))
+  (global $VERTEX_DISPLACEMENT_OFFSET (mut i32) (i32.const 0))
   
 
   ;; INTERNAL FUNCTIONS
@@ -87,9 +87,9 @@
     )
   )
 
-  (func $vertex_copy_num_to_mem_location (param $i i32) (result i32)
+  (func $vertex_displacement_mem_location (param $i i32) (result i32)
     (i32.add 
-      (global.get $VERTEX_MEMORY_COPY_OFFSET)
+      (global.get $VERTEX_DISPLACEMENT_OFFSET)
       (i32.mul
         (global.get $BYTES_PER_VERTEX)
         (local.get $i)
@@ -200,14 +200,14 @@
 
   (func $update_vertex_offsets (param $vertex_num i32)
     (local $vertex_mem_location i32)
-    (local $vertex_copy_mem_location i32)
+    (local $vertex_displacement_mem_location i32)
     (local $x f64)
     (local $y f64)
     (local $z f64)
 
     ;; load vertex data
     (local.set $vertex_mem_location (call $vertex_num_to_mem_location (local.get $vertex_num)))
-    (local.set $vertex_copy_mem_location (call $vertex_copy_num_to_mem_location (local.get $vertex_num)))
+    (local.set $vertex_displacement_mem_location (call $vertex_displacement_mem_location (local.get $vertex_num)))
     (local.set $x 
       (f64.add 
         (f64.load offset=0 (local.get $vertex_mem_location))
@@ -228,7 +228,7 @@
     )
 
     (f64.store offset=0
-      (local.get $vertex_copy_mem_location)
+      (local.get $vertex_displacement_mem_location)
       (f64.mul
         (f64.sub
           (call $perlin_noise (local.get $x) (local.get $y) (local.get $z))
@@ -238,7 +238,7 @@
       )
     )
     (f64.store offset=8
-      (local.get $vertex_copy_mem_location)
+      (local.get $vertex_displacement_mem_location)
       (f64.mul
         (f64.sub
           (call $perlin_noise (local.get $x) (local.get $y) (local.get $z))
@@ -248,7 +248,7 @@
       )
     )
     (f64.store offset=16
-      (local.get $vertex_copy_mem_location)
+      (local.get $vertex_displacement_mem_location)
       (f64.mul
         (f64.sub
           (call $perlin_noise (local.get $x) (local.get $y) (local.get $z))
@@ -389,7 +389,7 @@
 
   (func $draw_vertex (param $vertex_num i32)
     (local $vertex_mem_location i32)
-    (local $vertex_copy_mem_location i32)
+    (local $vertex_displacement_mem_location i32)
     (local $x f64)
     (local $y f64)
     (local $z f64)
@@ -399,15 +399,15 @@
     (local $perspective_denominator f64)
 
     (local.set $vertex_mem_location (call $vertex_num_to_mem_location (local.get $vertex_num)))
-    (local.set $vertex_copy_mem_location (call $vertex_copy_num_to_mem_location (local.get $vertex_num)))
+    (local.set $vertex_displacement_mem_location (call $vertex_displacement_mem_location (local.get $vertex_num)))
     (local.set $x (f64.load offset=0 (local.get $vertex_mem_location)))
     (local.set $y (f64.load offset=8 (local.get $vertex_mem_location)))
     (local.set $z (f64.load offset=16 (local.get $vertex_mem_location)))
 
     ;; add in noise
-    (local.set $x (f64.add (local.get $x) (f64.load offset=0 (local.get $vertex_copy_mem_location))))
-    (local.set $y (f64.add (local.get $y) (f64.load offset=8 (local.get $vertex_copy_mem_location))))
-    (local.set $z (f64.add (local.get $z) (f64.load offset=16 (local.get $vertex_copy_mem_location))))
+    (local.set $x (f64.add (local.get $x) (f64.load offset=0 (local.get $vertex_displacement_mem_location))))
+    (local.set $y (f64.add (local.get $y) (f64.load offset=8 (local.get $vertex_displacement_mem_location))))
+    (local.set $z (f64.add (local.get $z) (f64.load offset=16 (local.get $vertex_displacement_mem_location))))
 
     ;; denominator used for calculating perspective projection
     (local.set $perspective_denominator
@@ -613,7 +613,7 @@
     global.get $VERTEX_MEMORY_OFFSET
     global.get $VERTEX_MEMORY_LENGTH
     i32.add
-    global.set $VERTEX_MEMORY_COPY_OFFSET
+    global.set $VERTEX_DISPLACEMENT_OFFSET
 
     ;; distribute vertices equally throughout 3d space
     (call $init_vertices)
