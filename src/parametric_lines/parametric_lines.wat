@@ -9,11 +9,11 @@
 
   ;; MEMORY
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (memory $memory (export "memory") 10)
+  (memory $memory (export "memory") 2000)
 
   ;; canvas data (no memory offset)
-  (global $WIDTH (export "WIDTH") i32 (i32.const 255))
-  (global $HEIGHT (export "HEIGHT") i32 (i32.const 255))
+  (global $WIDTH (export "WIDTH") i32 (i32.const 2500))
+  (global $HEIGHT (export "HEIGHT") i32 (i32.const 2500))
   (global $NUM_PIXELS (mut i32) (i32.const 0))
   (global $BYTES_PER_PX i32 (i32.const 4))
   (global $MEM_NOP i32 (i32.const -1))
@@ -62,12 +62,50 @@
     i32.mul
   )
 
-  ;; set canvas color as opaque white
+  ;; set canvas color as opaque black
   (func $clear_canvas
-    (memory.fill
+    (local $i i32)
+    (local $end_i i32)
+    (local.set $i 
       (global.get $CANVAS_MEMORY_OFFSET)
-      (i32.const 0) 
-      (i32.add (global.get $CANVAS_MEMORY_OFFSET) (global.get $CANVAS_MEMORY_LENGTH))
+    )
+    (local.set $end_i 
+      (i32.add 
+        (global.get $CANVAS_MEMORY_OFFSET) 
+        (global.get $CANVAS_MEMORY_LENGTH)
+      )
+    )
+    (loop $loop
+      (if (i32.lt_s (local.get $i) (local.get $end_i))
+        (then
+
+          (i32.store8
+            offset=0
+            (local.get $i)
+            (i32.const 0)
+          )
+          (i32.store8
+            offset=1
+            (local.get $i)
+            (i32.const 0)
+          )
+          (i32.store8
+            offset=2
+            (local.get $i)
+            (i32.const 0)
+          )
+          (i32.store8
+            offset=3
+            (local.get $i)
+            (i32.const 0xff)
+          )
+
+
+          (local.set $i (i32.add (local.get $i) (global.get $BYTES_PER_PX)))
+          br $loop
+        )
+        (else return)
+      )
     )
   )
 
@@ -297,6 +335,8 @@
     f64.const 2
     f64.mul
     global.set $TWO_PI
+
+    (call $clear_canvas)
   )
 
   ;; map value from one range to another (and optionally clamp value at the end)
@@ -333,76 +373,125 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   ;; update state on every tick
-  (func (export "update")
+  (func (export "tick")
     (local $x0 i32)
     (local $y0 i32)
     (local $x1 i32)
     (local $y1 i32)
+    (local $i i32)
 
-    (global.set $T (f64.add (global.get $T) (f64.const 0.01)))
+    (loop $loop
+      (if 
+        (i32.lt_s (local.get $i) (i32.const 10000))
+        (then
 
+          (global.set $T (f64.add (global.get $T) (f64.const 0.001)))
 
-    (local.set $x0
-      (i32.trunc_sat_f64_u
-        (call $map
-          (call $cos (global.get $T))
-          (f64.const -1)
-          (f64.const 1)
-          (f64.const 0)
-          (f64.convert_i32_u (global.get $WIDTH))
+          (local.set $x0
+            (i32.trunc_sat_f64_u
+              (call $map
+                (f64.add
+                  (call $cos 
+                    (f64.mul
+                      (global.get $T)
+                      (f64.const 1.001)
+                    )
+                  )
+                  (call $sin 
+                    (f64.mul
+                      (global.get $T)
+                      (f64.const 1.002)
+                    )
+                  )
+                )
+                (f64.const -2)
+                (f64.const 2)
+                (f64.const 0)
+                (f64.convert_i32_u (global.get $WIDTH))
+              )
+            )
+          )
+
+          (local.set $y0
+            (i32.trunc_sat_f64_u
+              (call $map
+              (f64.add
+                  (call $cos 
+                    (f64.mul
+                      (global.get $T)
+                      (f64.const 1.003)
+                    )
+                  )
+                  (call $sin 
+                    (f64.mul
+                      (global.get $T)
+                      (f64.const 1.004)
+                    )
+                  )
+                )
+                (f64.const -2)
+                (f64.const 2)
+                (f64.const 0)
+                (f64.convert_i32_u (global.get $HEIGHT))
+              )
+            )
+          )
+
+          (call $draw_pixel
+            (local.get $x0)
+            (local.get $y0)
+            (i32.const 0xff)
+            (i32.const 0xff)
+            (i32.const 0xff)
+            (i32.const 0xff)
+          )
+
+          (local.set $i (i32.add (local.get $i) (i32.const 1)))
+          (br $loop)
         )
       )
     )
 
-    (local.set $y0
-      (i32.trunc_sat_f64_u
-        (call $map
-          (call $sin (global.get $T))
-          (f64.const -1)
-          (f64.const 1)
-          (f64.const 0)
-          (f64.convert_i32_u (global.get $HEIGHT))
-        )
-      )
-    )
+    
 
-    (local.set $x1
-      (i32.trunc_sat_f64_u
-        (call $map
-          (call $cos (f64.add (global.get $T) (global.get $PI)))
-          (f64.const -1)
-          (f64.const 1)
-          (f64.const 0)
-          (f64.convert_i32_u (global.get $WIDTH))
-        )
-      )
-    )
+    ;; (local.set $x1
+    ;;   (i32.trunc_sat_f64_u
+    ;;     (call $map
+    ;;       (f64.add
+    ;;         (call $sin (f64.add (global.get $T) (global.get $PI)))
+    ;;         (call $cos (f64.add (global.get $T) (global.get $PI)))
+    ;;       )
+    ;;       (f64.const -2)
+    ;;       (f64.const 2)
+    ;;       (f64.const 0)
+    ;;       (f64.convert_i32_u (global.get $WIDTH))
+    ;;     )
+    ;;   )
+    ;; )
 
-    (local.set $y1
-      (i32.trunc_sat_f64_u
-        (call $map
-          (call $sin (f64.add (global.get $T) (global.get $PI)))
-          (f64.const -1)
-          (f64.const 1)
-          (f64.const 0)
-          (f64.convert_i32_u (global.get $HEIGHT))
-        )
-      )
-    )
+    ;; (local.set $y1
+    ;;   (i32.trunc_sat_f64_u
+    ;;     (call $map
+    ;;       (call $sin (f64.add (global.get $T) (global.get $PI)))
+    ;;       (f64.const -1)
+    ;;       (f64.const 1)
+    ;;       (f64.const 0)
+    ;;       (f64.convert_i32_u (global.get $HEIGHT))
+    ;;     )
+    ;;   )
+    ;; )
 
     ;; clear canvas
-    (call $clear_canvas)
+    ;; (call $clear_canvas)
 
-    (call $draw_line
-      (local.get $x0)
-      (local.get $y0)
-      (local.get $x1)
-      (local.get $y1)
-      (i32.const 0xff)
-      (i32.const 0xff)
-      (i32.const 0xff)
-      (i32.const 0xff)
-    )
+    ;; (call $draw_line
+    ;;   (local.get $x0)
+    ;;   (local.get $y0)
+    ;;   (i32.const 0xff)
+    ;;   (i32.const 0xff)
+    ;;   (i32.const 0xff)
+    ;;   (i32.const 0xff)
+    ;; )
   )
 
   ;; initilize state when wasm module is instantiated

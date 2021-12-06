@@ -4,7 +4,8 @@
   <style>
     body {
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
       margin: 0;
       position: 'relative';
       background-color: white;
@@ -21,11 +22,17 @@
       image-rendering: pixelated;
       image-rendering: crisp-edges;
     }
+
+    button {
+      display: block;
+      margin: 1rem;
+    }
   </style>
 </head>
 
 <body>
   <canvas></canvas>
+  <button>Save</button>
   <script>
     let prevDragY = { current: 0 };
     let prevDragX = { current: 0 };
@@ -63,9 +70,16 @@
         imageData.data.set(canvasData);
         ctx.putImageData(imageData, 0, 0);
 
+        document.querySelector('button').onclick = () => {
+          const a = document.createElement('a');
+          a.href = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+          a.download = 'canvas.png';
+          a.click();
+        };
+
         // animate
         (async function animate() {
-          wasm.update();
+          wasm.tick();
           imageData.data.set(canvasData);
           ctx.putImageData(imageData, 0, 0);
           requestAnimationFrame(animate);
