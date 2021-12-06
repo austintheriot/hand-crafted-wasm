@@ -12,8 +12,8 @@
   (memory $memory (export "memory") 2000)
 
   ;; canvas data (no memory offset)
-  (global $WIDTH (export "WIDTH") i32 (i32.const 2500))
-  (global $HEIGHT (export "HEIGHT") i32 (i32.const 2500))
+  (global $WIDTH (export "WIDTH") i32 (i32.const 2000))
+  (global $HEIGHT (export "HEIGHT") i32 (i32.const 2000))
   (global $NUM_PIXELS (mut i32) (i32.const 0))
   (global $BYTES_PER_PX i32 (i32.const 4))
   (global $MEM_NOP i32 (i32.const -1))
@@ -382,9 +382,8 @@
 
     (loop $loop
       (if 
-        (i32.lt_s (local.get $i) (i32.const 10000))
+        (i32.lt_s (local.get $i) (i32.const 10_000))
         (then
-
           (global.set $T (f64.add (global.get $T) (f64.const 0.001)))
 
           (local.set $x0
@@ -394,13 +393,13 @@
                   (call $cos 
                     (f64.mul
                       (global.get $T)
-                      (f64.const 1.001)
+                      (f64.const 1)
                     )
                   )
                   (call $sin 
                     (f64.mul
                       (global.get $T)
-                      (f64.const 1.002)
+                      (f64.const 1)
                     )
                   )
                 )
@@ -419,13 +418,13 @@
                   (call $cos 
                     (f64.mul
                       (global.get $T)
-                      (f64.const 1.003)
+                      (f64.const 1.01)
                     )
                   )
                   (call $sin 
                     (f64.mul
                       (global.get $T)
-                      (f64.const 1.004)
+                      (f64.const 0.98)
                     )
                   )
                 )
@@ -433,6 +432,45 @@
                 (f64.const 2)
                 (f64.const 0)
                 (f64.convert_i32_u (global.get $HEIGHT))
+              )
+            )
+          )
+
+          ;; shrink drawing and translate to center
+          (local.set $x0 
+            (i32.add
+              (i32.div_u
+                (i32.mul 
+                  (local.get $x0)
+                  (i32.const 3)
+                )
+                (i32.const 4)
+              )
+              (i32.div_u
+                (i32.mul
+                  (global.get $WIDTH)
+                  (i32.const 1)
+                )
+                (i32.const 8)
+              )
+            )
+          )
+
+          (local.set $y0 
+            (i32.add
+              (i32.div_u 
+                (i32.mul
+                  (local.get $y0)
+                  (i32.const 3)
+                )
+                (i32.const 4)
+              )
+              (i32.div_u
+                (i32.mul
+                  (global.get $HEIGHT)
+                  (i32.const 1)
+                )
+                (i32.const 8)
               )
             )
           )
