@@ -104,6 +104,7 @@ const optimizeCb = async (directoryPath, fileName, fn, options = {}) => {
 const updateBytes = async () => {
   try {
     const readMePath = './README.md';
+    const { size: plottingCurves } = await asyncFs.stat('src/plotting_curves/plotting_curves_optimized.wasm');
     const { size: lifeSize } = await asyncFs.stat('src/life/life_optimized.wasm');
     const { size: chaosCircleSize } = await asyncFs.stat('src/life/life_optimized.wasm');
     const { size: perlinNoiseSize } = await asyncFs.stat('src/perlin_noise/perlin_noise_optimized.wasm');
@@ -113,10 +114,11 @@ const updateBytes = async () => {
     const readMeBytes = await asyncFs.readFile(readMePath);
     const readMe = readMeBytes.toString();
     const updatedReadme = readMe
+      .replace(/(?<=Plotting 2D Curves:)(.*)(?=bytes)/, ` ${plottingCurves} `)
       .replace(/(?<=Noise Field:)(.*)(?=bytes)/, ` ${perlinNoiseSize + noiseFieldSize} `)
       .replace(/(?<=Life:)(.*)(?=bytes)/, ` ${lifeSize} `)
       .replace(/(?<=Lorenz System:)(.*)(?=bytes)/, ` ${lorenzSystemSize} `)
-      .replace(/(?<=Noise Waves:)(.*)(?=bytes)/, ` ${noiseWavesSize} `)
+      .replace(/(?<=Noise Waves:)(.*)(?=bytes)/, ` ${noiseWavesSize + noiseFieldSize} `)
       .replace(/(?<=Chaos Circle:)(.*)(?=bytes)/, ` ${perlinNoiseSize + chaosCircleSize} `);
     await asyncFs.writeFile(readMePath, updatedReadme);
   } catch (e) {
