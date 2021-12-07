@@ -9,9 +9,9 @@ y = cos(Ct) + sin(Dt)
 ```
 where t increments toward infinity on every frame.
 
-[See live demo](/src/hand-crafted-wasm/src/plotting_curves/)
+[See live demo](https://austintheriot.github.io/src/plotting_curves/)
 
-[See full gallery](/src/hand-crafted-wasm/src/plotting_curves/gallery.html)
+[See full gallery](https://austintheriot.github.io/src/plotting_curves/gallery.html)
 
 ![Plotting curves](/images/plotting_curves.png)
 
@@ -19,7 +19,7 @@ where t increments toward infinity on every frame.
 
 A rasterized perlin noise field rendered in WebAssembly. Uses a custom all-WebAssembly port of processing/p5.js' perlin noise implementation.
 
-[See live demo](/src/hand-crafted-wasm/src/noise_field/)
+[See live demo](https://austintheriot.github.io/src/noise_field/)
 
 ![Perlin Noise](/images/perlin_noise.png)
 
@@ -27,7 +27,7 @@ A rasterized perlin noise field rendered in WebAssembly. Uses a custom all-WebAs
 
 3D particle simulation of the Lorenz strange attractor using 30,000 particles. Use arrow keys or drag/touch the window to change the camera position. All physics/3d projection code was written from scratch in WebAssembly and was inspired by ssloy's tinyrenderer: https://github.com/ssloy/tinyrenderer
 
-[See live demo](/src/hand-crafted-wasm/src/lorenz_system/)
+[See live demo](https://austintheriot.github.io/src/lorenz_system/)
 
 ![Lorenz System](/images/lorenz_system.png)
 
@@ -35,7 +35,7 @@ A rasterized perlin noise field rendered in WebAssembly. Uses a custom all-WebAs
 
 An implementation of the classic Conway's Game Of Life, hand written in WebAssembly.
 
-[See live demo](/src/hand-crafted-wasm/src/life/)
+[See live demo](https://austintheriot.github.io/src/life/)
 
 ![Conway's Game of Life](/images/conways_game_of_life.png)
 
@@ -43,7 +43,7 @@ An implementation of the classic Conway's Game Of Life, hand written in WebAssem
 
 3D particle waves. Use arrow keys or drag/touch the window to change the camera position. 
 
-[See live demo](/src/hand-crafted-wasm/src/noise_waves)
+[See live demo](https://austintheriot.github.io/src/noise_waves)
 
 ![Noise Waves](/images/noise_waves.png)
 
@@ -51,7 +51,7 @@ An implementation of the classic Conway's Game Of Life, hand written in WebAssem
 
 An ever-contracting and expanding flower shape. Uses a custom all-WebAssembly port of processing/p5.js' perlin noise implementation.
 
-[See live demo](/src/hand-crafted-wasm/src/chaos_circle/)
+[See live demo](https://austintheriot.github.io/src/chaos_circle/)
 
 ![Chaos Circle](/images/chaos_circle.png)
 
