@@ -1,0 +1,2 @@
+x = cos(1t) + sin(1t)
+y = cos(1t) + sin(1.13t)

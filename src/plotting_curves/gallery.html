@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plotting Curves: Gallery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
+  <style>
+    *, html, body {
+      padding: 0;
+      margin: 0;
+      box-sizing: content-box;
+      border: none;
+    }
+
+    h1, h2, img, code {
+      width: 90%;
+      max-width: 900px;
+      margin: 0 auto;
+      display: block;
+    }
+
+    h1, h2 {
+      margin-top: 5rem;
+      font-family: 'Roboto', sans-serif;
+      margin-bottom: 1rem;
+    }
+
+    img {
+      margin-bottom: 1rem;
+    }
+
+    code {
+      background-color: #eee;
+      color: black;
+      margin-bottom: 5rem;
+      white-space: pre;
+      padding: 0.5rem;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Plotting Curves: Gallery</h1>
+  <script>
+    const fetchTextsAndImages = async () => {
+      const NUMBER_OF_IMGS = 13;
+      const body = document.querySelector('body');
+
+      const texts = await Promise.all(
+        Array(NUMBER_OF_IMGS)
+          .fill(null)
+          .map((_, i) => fetch(`./examples/${i}.txt`))
+      ).then((texts) => (
+        Promise.all(texts.map((text) => text.text()))
+      ));
+
+      for (let i = 0; i < NUMBER_OF_IMGS; i++) {
+        const h2 = document.createElement('h2');
+        h2.textContent = i;
+        const img = document.createElement('img');
+        img.src = `./examples/${i}.png`;
+        img.loading = 'lazy';
+        const code = document.createElement('code');
+        code.textContent = texts[i];
+        body.append(h2, img, code)
+      }
+    }
+    fetchTextsAndImages();
+  </script>
+</body>
+
+</html>

@@ -393,13 +393,13 @@
                   (call $cos 
                     (f64.mul
                       (global.get $T)
-                      (f64.const 1)
+                      (f64.const 1.01)
                     )
                   )
                   (call $sin 
                     (f64.mul
                       (global.get $T)
-                      (f64.const 1)
+                      (f64.const 1.02)
                     )
                   )
                 )
@@ -418,13 +418,13 @@
                   (call $cos 
                     (f64.mul
                       (global.get $T)
-                      (f64.const 1.01)
+                      (f64.const 1.03)
                     )
                   )
                   (call $sin 
                     (f64.mul
                       (global.get $T)
-                      (f64.const 0.98)
+                      (f64.const 1.04)
                     )
                   )
                 )
