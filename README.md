@@ -1,5 +1,3 @@
-# Raw WebAssembly
-
 ## Plotting 2D Curves: 468 bytes
 
 An amazing variety of unique 2-dimensional shapes can be plotted by minute adjustments to the constants A, B, C, D when plotting the following: 
