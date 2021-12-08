@@ -17,7 +17,7 @@
       border: none;
     }
 
-    h1, h2, img, code {
+    h1, h2, a, code {
       width: 90%;
       max-width: 900px;
       margin: 0 auto;
@@ -30,8 +30,13 @@
       margin-bottom: 1rem;
     }
 
+    a {
+      margin: 1rem auto;
+    }
+
     img {
-      margin-bottom: 1rem;
+      width: 100%;
+      display: block;
     }
 
     code {
@@ -48,7 +53,7 @@
   <h1>Plotting Curves: Gallery</h1>
   <script>
     const fetchTextsAndImages = async () => {
-      const NUMBER_OF_IMGS = 13;
+      const NUMBER_OF_IMGS = 32;
       const body = document.querySelector('body');
 
       const texts = await Promise.all(
@@ -62,12 +67,17 @@
       for (let i = 0; i < NUMBER_OF_IMGS; i++) {
         const h2 = document.createElement('h2');
         h2.textContent = i;
+
+        const imgSrc = `./examples/${i}.png`;
         const img = document.createElement('img');
-        img.src = `./examples/${i}.png`;
+        img.src = imgSrc;
         img.loading = 'lazy';
+        const imgLink = document.createElement('a');
+        imgLink.href = imgSrc;
+        imgLink.appendChild(img);
         const code = document.createElement('code');
         code.textContent = texts[i];
-        body.append(h2, img, code)
+        body.append(h2, imgLink, code)
       }
     }
     fetchTextsAndImages();

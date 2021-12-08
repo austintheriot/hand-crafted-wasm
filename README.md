@@ -1,11 +1,13 @@
-## Plotting 2D Curves: 468 bytes
+## Plotting 2D Curves: 587 bytes
 
-An amazing variety of unique 2-dimensional shapes can be plotted by minute adjustments to the constants A, B, C, D when plotting the following: 
+An amazing (and often beautiful) variety of unique 2-dimensional shapes can be plotted by minute adjustments to the constants A, B, C, and D when plotting the following: 
 ```
 x = cos(At) + sin(Bt)
 y = cos(Ct) + sin(Dt)
 ```
-where t increments toward infinity on every frame.
+where t increments upward on every frame. 
+
+Below you can find a live, editable demo where this graph is plotted as well as a gallery of interesting combinations I've found. If you come up with your own interesting pattern, I'd love to see it!
 
 [See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/plotting_curves/)
 

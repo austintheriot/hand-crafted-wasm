@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 
 <head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
   <style>
     body {
       display: flex;
@@ -9,6 +12,7 @@
       margin: 0;
       position: 'relative';
       background-color: white;
+      font-family: 'Roboto', sans-serif;
     }
 
     canvas {
@@ -17,22 +21,58 @@
       object-fit: contain;
       touch-action: none;
       background-color: black;
-
-      /* default is to smooth edges of pixels on canvas */
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
     }
 
     button {
       display: block;
       margin: 1rem;
     }
+
+    .input-container {
+      top: 1rem;
+      left: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-evenly;
+      align-items: center;
+      gap: 1rem;
+      background-color: #fff2;
+      padding: 1rem;
+      border-radius: 5px;
+    }
+
+    .label-container {
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      margin-bottom: 0.25rem;
+    }
   </style>
 </head>
 
 <body>
   <canvas></canvas>
-  <button>Save</button>
+  <div class="input-container">
+    <div class="label-container">
+      <label for="a">A</label>
+      <input id="a" step="0.01" type="number"/>
+    </div>
+    <div class="label-container">
+      <label for="b">B</label>
+      <input id="b" step="0.01" type="number"/>
+    </div>
+    <div class="label-container">
+      <label for="c">C</label>
+      <input id="c" step="0.01" type="number"/>
+    </div>
+    <div class="label-container">
+      <label for="d">D</label>
+      <input id="d" step="0.01" type="number"/>
+    </div>
+    <button>Save Image & Parameters</button>
+  </div>
   <script>
     let prevDragY = { current: 0 };
     let prevDragX = { current: 0 };
@@ -71,11 +111,28 @@
         ctx.putImageData(imageData, 0, 0);
 
         document.querySelector('button').onclick = () => {
-          const a = document.createElement('a');
-          a.href = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
-          a.download = 'canvas.png';
-          a.click();
+          const imgLink = document.createElement('a');
+          imgLink.href = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+          imgLink.download = 'plotting_curves.png';
+          imgLink.click();
+
+          const textContent = `x = cos(${wasm.A.value}t) + sin(${wasm.B.value}t)\ny = cos(${wasm.C.value}t) + sin(${wasm.D.value}t)`
+          const textBlob = new Blob([textContent], {type: "application/octet-binary"});
+          const textLink = document.createElement("a");
+          textLink.setAttribute("href", URL.createObjectURL(textBlob));
+          textLink.setAttribute("download", `plotting_curves.txt`);
+          textLink.click();
         };
+
+        const [inputA, inputB, inputC, inputD] = document.querySelectorAll('input');
+        inputA.value = wasm.A.value;
+        inputA.onchange = (e) => { wasm.set_a(e.currentTarget.value)};
+        inputB.value = wasm.B.value;
+        inputB.onchange = (e) => { wasm.set_b(e.currentTarget.value)};
+        inputC.value = wasm.C.value;
+        inputC.onchange = (e) => { wasm.set_c(e.currentTarget.value)};
+        inputD.value = wasm.D.value;
+        inputD.onchange = (e) => { wasm.set_d(e.currentTarget.value)};
 
         // animate
         (async function animate() {

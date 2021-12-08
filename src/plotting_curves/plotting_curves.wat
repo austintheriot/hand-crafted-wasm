@@ -13,9 +13,15 @@
   (global $HEIGHT (export "HEIGHT") i32 (i32.const 2000))
   (global $NUM_PIXELS (mut i32) (i32.const 0))
   (global $BYTES_PER_PX i32 (i32.const 4))
-  (global $T (mut f64) (f64.const 0))
   (global $CANVAS_MEMORY_OFFSET (export "CANVAS_MEMORY_OFFSET") i32 (i32.const 0)) 
   (global $CANVAS_MEMORY_LENGTH (export "CANVAS_MEMORY_LENGTH") (mut i32) (i32.const 0))
+
+  ;; plotting state
+  (global $T (mut f64) (f64.const 0))
+  (global $A (export "A") (mut f64) (f64.const 2.03))
+  (global $B (export "B") (mut f64) (f64.const 3.01))
+  (global $C (export "C") (mut f64) (f64.const 2.01))
+  (global $D (export "D") (mut f64) (f64.const 3.02))
 
   ;; INTERNAL FUNCTIONS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -190,6 +196,23 @@
 
   ;; EXTERNAL FUNCTIONS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (func (export "set_a") (param f64) 
+    (global.set $A (local.get 0))
+    (call $clear_canvas)
+  )
+  (func (export "set_b") (param f64) 
+    (global.set $B (local.get 0))
+    (call $clear_canvas)
+  )
+  (func (export "set_c") (param f64) 
+    (global.set $C (local.get 0))
+    (call $clear_canvas)
+  )
+  (func (export "set_d") (param f64) 
+    (global.set $D (local.get 0))
+    (call $clear_canvas)
+  )
+
   ;; update state on every tick
   (func (export "tick")
     (local $x0 i32)
@@ -211,13 +234,13 @@
                   (call $cos 
                     (f64.mul
                       (global.get $T)
-                      (f64.const 2.03)
+                      (global.get $A)
                     )
                   )
                   (call $sin 
                     (f64.mul
                       (global.get $T)
-                      (f64.const 3.01)
+                      (global.get $B)
                     )
                   )
                 )
@@ -236,13 +259,13 @@
                   (call $cos 
                     (f64.mul
                       (global.get $T)
-                      (f64.const 2.01)
+                      (global.get $C)
                     )
                   )
                   (call $sin 
                     (f64.mul
                       (global.get $T)
-                      (f64.const 3.02)
+                      (global.get $D)
                     )
                   )
                 )
