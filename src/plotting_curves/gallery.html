@@ -10,24 +10,43 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300&display=swap" rel="stylesheet">
   <style>
-    *, html, body {
+    *,
+    html,
+    body {
       padding: 0;
       margin: 0;
       box-sizing: content-box;
       border: none;
     }
 
-    h1, h2, a, code {
+    h1 {
       width: 90%;
-      max-width: 900px;
-      margin: 0 auto;
-      display: block;
-    }
-
-    h1, h2 {
-      margin-top: 5rem;
+      max-width: 1200px;
+      margin: 5rem auto;
       font-family: 'Roboto', sans-serif;
       margin-bottom: 1rem;
+    }
+
+    .img-gallery {
+      width: 90%;
+      max-width: 1200px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-evenly;
+      align-items: center;
+      margin: 0 auto;
+    }
+
+    .img-code-container {
+      max-width: 300px;
+      margin: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h2 {
+      font-family: 'Roboto', sans-serif;
+      margin-bottom: 0.5rem;
     }
 
     a {
@@ -42,8 +61,9 @@
     code {
       background-color: #eee;
       color: black;
+      margin-top: 0.25rem;
       margin-bottom: 5rem;
-      white-space: pre;
+      white-space: pre-wrap;
       padding: 0.5rem;
     }
   </style>
@@ -51,11 +71,13 @@
 
 <body>
   <h1>Plotting Curves: Gallery</h1>
+  <div class="img-gallery"></div>
   <script>
+    const NUMBER_OF_IMGS = 33;
+    const body = document.querySelector('body');
+    const imageGallery = document.querySelector('.img-gallery');
+    
     const fetchTextsAndImages = async () => {
-      const NUMBER_OF_IMGS = 32;
-      const body = document.querySelector('body');
-
       const texts = await Promise.all(
         Array(NUMBER_OF_IMGS)
           .fill(null)
@@ -67,7 +89,8 @@
       for (let i = 0; i < NUMBER_OF_IMGS; i++) {
         const h2 = document.createElement('h2');
         h2.textContent = i;
-
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'img-code-container';
         const imgSrc = `./examples/${i}.png`;
         const img = document.createElement('img');
         img.src = imgSrc;
@@ -77,7 +100,8 @@
         imgLink.appendChild(img);
         const code = document.createElement('code');
         code.textContent = texts[i];
-        body.append(h2, imgLink, code)
+        imgContainer.append(h2, imgLink, code);
+        imageGallery.append(imgContainer);
       }
     }
     fetchTextsAndImages();
