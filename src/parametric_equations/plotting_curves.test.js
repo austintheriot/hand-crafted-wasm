@@ -1,7 +1,7 @@
 /** @jest-environment node */
 const { setupWasmInstance } = require('../../utils/wasmUtils.js');
 
-const MODULE_NAME = 'plotting_curves';
+const MODULE_NAME = 'parametric_equations';
 
 describe(`Test ${MODULE_NAME}`, () => {
   let wasm;

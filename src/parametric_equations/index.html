@@ -83,7 +83,7 @@
     let mouseDown = false;
     Promise.all([
       fetch('../perlin_noise/perlin_noise_optimized.wasm'),
-      fetch('./plotting_curves_optimized.wasm')
+      fetch('./parametric_equations_optimized.wasm')
     ]).then(([res1, res2]) => Promise.all([
       res1.arrayBuffer(),
       res2.arrayBuffer()

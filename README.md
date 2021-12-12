@@ -1,19 +1,21 @@
-## Plotting 2D Curves: 587 bytes
+## Parametric Equations: 587 bytes
 
-An amazing (and often beautiful) variety of unique 2-dimensional shapes can be plotted by minute adjustments to the constants A, B, C, and D when plotting the following: 
+An amazing (and often beautiful) variety of unique 2-dimensional patterns can be discovered by graphing the following parametric equation: 
 ```
 x = cos(At) + sin(Bt)
 y = cos(Ct) + sin(Dt)
 ```
-where t increments upward on every frame. 
+where t increments upward towards infinity on every frame. 
 
-Below you can find a live, editable demo where this graph is plotted as well as a gallery of interesting combinations I've found. If you come up with your own interesting pattern, I'd love to see it!
+It's amazing how minute adjustments to the constants A, B, C, and D (sometimes differing by only by 0.01) can produce wildly different results. It's important to note that although many examples in the gallery below give the illusion of 3D, they are entirely 2-dimensional.
 
-[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/plotting_curves/)
+Below you can find a live, editable demo as well as a gallery of interesting combinations I've found. If you come up with your own interesting pattern, I'd love to see it!
 
-[See full gallery](https://austintheriot.github.io/hand-crafted-wasm/src/plotting_curves/gallery.html)
+[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/parametric_equations/)
 
-![Plotting curves](/images/plotting_curves.png)
+[See full gallery](https://austintheriot.github.io/hand-crafted-wasm/src/parametric_equations/gallery.html)
+
+![Parametric Equations](/images/parametric_equations.png)
 
 ## 2D Perlin Noise Field: 1083 bytes
 
