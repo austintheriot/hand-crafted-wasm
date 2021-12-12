@@ -1,4 +1,4 @@
-## Parametric Equations: 587 bytes
+## 2D Parametric Equations: 587 bytes
 
 An amazing (and often beautiful) variety of unique 2-dimensional patterns can be discovered by graphing the following parametric equation: 
 ```
