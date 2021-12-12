@@ -113,14 +113,14 @@
         document.querySelector('button').onclick = () => {
           const imgLink = document.createElement('a');
           imgLink.href = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
-          imgLink.download = 'plotting_curves.png';
+          imgLink.download = 'parametric_equations.png';
           imgLink.click();
 
           const textContent = `x = cos(${wasm.A.value}t) + sin(${wasm.B.value}t)\ny = cos(${wasm.C.value}t) + sin(${wasm.D.value}t)`
           const textBlob = new Blob([textContent], {type: "application/octet-binary"});
           const textLink = document.createElement("a");
           textLink.setAttribute("href", URL.createObjectURL(textBlob));
-          textLink.setAttribute("download", `plotting_curves.txt`);
+          textLink.setAttribute("download", `parametric_equations.txt`);
           textLink.click();
         };
 

@@ -16,7 +16,7 @@
   (global $CANVAS_MEMORY_OFFSET (export "CANVAS_MEMORY_OFFSET") i32 (i32.const 0)) 
   (global $CANVAS_MEMORY_LENGTH (export "CANVAS_MEMORY_LENGTH") (mut i32) (i32.const 0))
 
-  ;; plotting state
+  ;; parametric equation state
   (global $T (mut f64) (f64.const 0))
   (global $A (export "A") (mut f64) (f64.const 2.03))
   (global $B (export "B") (mut f64) (f64.const 3.01))
