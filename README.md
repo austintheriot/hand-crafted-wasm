@@ -5,9 +5,9 @@ An amazing (and often beautiful) variety of unique 2-dimensional patterns can be
 x = cos(At) + sin(Bt)
 y = cos(Ct) + sin(Dt)
 ```
-where t increments upward towards infinity on every frame. 
+where `A`, `B`, `C`, and `D` are arbitrary constants, and `t` increments upward towards infinity on every frame. 
 
-It's amazing how minute adjustments to the constants A, B, C, and D (sometimes differing by only by 0.01) can produce wildly different results. It's important to note that although many examples in the gallery below give the illusion of 3D, they are entirely 2-dimensional.
+It's amazing how minute adjustments to `A`, `B`, `C`, and `D` (sometimes differing by only by 0.01) can produce wildly different results. It's important to note that although many examples in the gallery below give the illusion of 3D, they are entirely 2-dimensional.
 
 Below you can find a live, editable demo as well as a gallery of interesting combinations I've found. If you come up with your own interesting pattern, I'd love to see it!
 
