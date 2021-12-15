@@ -48,6 +48,35 @@
   ;; INTERNAL FUNCTIONS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+   ;; clamp an f64 number between two other values 
+  (func $f64_clamp (param $min f64) (param $num f64) (param $max f64) (result f64)
+    (call $f64_min 
+      (call $f64_max 
+        (local.get $num) 
+        (local.get $min)
+      ) 
+      (local.get $max)
+    )
+  )
+
+  ;; get max between two f64 values
+  (func $f64_max (param f64 f64) (result f64)
+    (select
+      (local.get 0)
+      (local.get 1)
+      (f64.gt (local.get 0) (local.get 1))
+    )
+  )
+
+  ;; get min between two f64 values
+  (func $f64_min (param f64 f64) (result f64)
+    (select
+      (local.get 0)
+      (local.get 1)
+      (f64.lt (local.get 0) (local.get 1))
+    )
+  )
+
   ;; map value from one range to another (and optionally clamp value at the end)
   (func $map (param $n f64) (param $start_min f64) (param $start_max f64) 
     (param $end_min f64) (param $end_max f64) (result f64) 
@@ -598,10 +627,22 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   (func (export "add_y_theta") (param f64)
-    (global.set $Y_THETA (f64.add (global.get $Y_THETA) (local.get 0)))
+    (global.set $Y_THETA 
+      (call $f64_clamp
+        (f64.const -1)
+        (f64.add (global.get $Y_THETA) (local.get 0))
+        (f64.const 1)
+      )
+    )
   )
   (func (export "add_x_theta") (param f64)
-    (global.set $X_THETA (f64.add (global.get $X_THETA) (local.get 0)))
+    (global.set $X_THETA 
+      (call $f64_clamp
+        (f64.const -1)
+        (f64.add (global.get $X_THETA) (local.get 0))
+        (f64.const 1)
+      )
+    )
   )
 
   ;; prepare state
