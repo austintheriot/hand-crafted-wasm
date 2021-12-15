@@ -78,7 +78,7 @@
           prevTouchY.current = nextClientY;
           const px = dx / width;
           const py = dy / height;
-          wasm.add_x_theta(px * 5);
+          wasm.add_y_theta(-px * 5);
           wasm.add_x_theta(py * 5);
         }
 

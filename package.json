@@ -2,9 +2,9 @@
   "name": "hand-crafted-wasm",
   "version": "0.0.0",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
-    "serve": "vite preview",
+    "serve": "vite preview --host 0.0.0.0",
     
     "clean-wasm": "node ./scripts/clean.js",
     "build-wasm:debug": "node ./scripts/buildDebug.js",
