@@ -14,14 +14,14 @@
 
   ;; function tables
   (type $ForEachCallback (func (param i32))) 
-  (table funcref (elem $update_vertex_offsets $draw_vertex))
+  (table funcref (elem $update_vertex_offsets $connect_vertex))
   (global $UPDATE_VERTEX i32 (i32.const 0))
-  (global $DRAW_VERTEX i32 (i32.const 1))
+  (global $CONNECT_VERTEX i32 (i32.const 1))
 
   ;; canvas data (no memory offset)
-  (global $WIDTH (export "WIDTH") i32 (i32.const 350))
-  (global $HEIGHT (export "HEIGHT") i32 (i32.const 350))
-  (global $DEPTH i32 (i32.const 350))
+  (global $WIDTH (export "WIDTH") i32 (i32.const 750))
+  (global $HEIGHT (export "HEIGHT") i32 (i32.const 750))
+  (global $DEPTH i32 (i32.const 750))
   (global $VIEW_DISTANCE f64 (f64.const 8))
   (global $DT f64 (f64.const 0.01))
   (global $Y_THETA (mut f64) (f64.const 1))
@@ -36,7 +36,7 @@
 
   ;; vertex data (after canvas data)
   (global $INITIAL_PX_BETWEEN_VERTICES (mut i32) (i32.const 0))
-  (global $NUM_VERTICES i32 (i32.const 100))
+  (global $NUM_VERTICES i32 (i32.const 225))
   ;; bytes per vertex (x, y, z) => (f64, f64, f64) => (8 bytes, 8 bytes, 8 bytes) => 24 bytes 
   (global $BYTES_PER_VERTEX i32 (i32.const 24))
   (global $VERTEX_MEMORY_OFFSET (mut i32) (i32.const 0))
@@ -235,39 +235,19 @@
       )
     )
 
-    ;; (f64.store offset=0
-    ;;   (local.get $vertex_displacement_mem_location)
-    ;;   (f64.mul
-    ;;     (f64.sub
-    ;;       (call $perlin_noise (local.get $x) (local.get $y) (local.get $z))
-    ;;       (f64.const 0.5)
-    ;;     )
-    ;;     (f64.const 1)
-    ;;   )
-    ;; )
-    ;; (f64.store offset=8
-    ;;   (local.get $vertex_displacement_mem_location)
-    ;;   (f64.mul
-    ;;     (f64.sub
-    ;;       (call $perlin_noise (local.get $x) (local.get $y) (local.get $z))
-    ;;       (f64.const 0.5)
-    ;;     )
-    ;;     (f64.const 1)
-    ;;   )
-    ;; )
-    ;; (f64.store offset=16
-    ;;   (local.get $vertex_displacement_mem_location)
-    ;;   (f64.mul
-    ;;     (f64.sub
-    ;;       (call $perlin_noise (local.get $x) (local.get $y) (local.get $z))
-    ;;       (f64.const 0.5)
-    ;;     )
-    ;;     (f64.const 1)
-    ;;   )
-    ;; )
+    (f64.store offset=8
+      (local.get $vertex_displacement_mem_location)
+      (f64.mul
+        (f64.sub
+          (call $perlin_noise (local.get $x) (local.get $y) (local.get $z))
+          (f64.const 0.5)
+        )
+        (f64.const 0.5)
+      )
+    )
   )
 
-  (func $canvas_coords_to_canvas_mem_index (param $x i32) (param $y i32) (param $z i32) (result i32)
+  (func $canvas_coords_to_canvas_mem_index (param $x i32) (param $y i32) (result i32)
     ;; check if vertex is out of bounds
     (if (i32.or
         (i32.or
@@ -323,7 +303,7 @@
     )
   )
 
-  (func $draw_pixel (param $x i32) (param $y i32) (param $z i32) 
+  (func $draw_pixel (param $x i32) (param $y i32)
     (param $r i32) (param $g i32) (param $b i32) (param $a i32)
     (local $canvas_mem_index i32)
 
@@ -331,7 +311,6 @@
       (call $canvas_coords_to_canvas_mem_index 
         (local.get $x)
         (local.get $y)
-        (local.get $z)
       )
     )
 
@@ -395,7 +374,176 @@
     )
   )
 
-  (func $draw_vertex (param $vertex_num i32)
+  ;; use bit hacks to quickly get absolute value of i32
+  (func $abs (param $value i32) (result i32)
+    (local $temp i32)
+
+    ;; make a mask of the sign bit
+    (local.set $temp 
+      (i32.shr_s 
+        (local.get $value) 
+        (i32.const 31)
+      )
+    )
+    ;; toggle the bits if value is negative
+    (local.set $value
+      (i32.xor
+        (local.get $value)
+        (local.get $temp)
+      )
+    )
+    ;; add one if value was negative
+    (local.set $value
+      (i32.add
+        (local.get $value)
+        (i32.and
+          (local.get $temp)
+          (i32.const 1)
+        )
+      )
+    )
+
+    (local.get $value)
+  )
+
+  ;; Bresenham's line algorithm
+  (func $draw_line 
+    (param $x0 i32) (param $y0 i32) (param $x1 i32) (param $y1 i32)
+    (param $r i32) (param $g i32) (param $b i32) (param $a i32)
+    (local $dx i32)
+    (local $sx i32)
+    (local $dy i32)
+    (local $sy i32)
+    (local $err i32)
+    (local $e2 i32)
+
+    (local.set $dx 
+      (call $abs
+        (i32.sub
+          (local.get $x1)
+          (local.get $x0)
+        )
+      )
+    )
+
+    (local.set $sx
+      (select
+        (i32.const 1)
+        (i32.const -1)
+        (i32.lt_s 
+          (local.get $x0)
+          (local.get $x1)
+        )
+      ) 
+    )
+
+    (local.set $dy
+      (i32.mul
+        (call $abs
+          (i32.sub
+            (local.get $y1)
+            (local.get $y0)
+          )
+        )
+        (i32.const -1)
+      )
+    )
+
+    (local.set $sy
+      (select
+        (i32.const 1)
+        (i32.const -1)
+        (i32.lt_s
+          (local.get $y0)
+          (local.get $y1)
+        )
+      ) 
+    )
+
+    (local.set $err
+      (i32.add
+        (local.get $dx)
+        (local.get $dy)
+      )
+    )
+
+    (loop $loop
+      (call $draw_pixel
+        (local.get $x0)
+        (local.get $y0)
+        (local.get $r)
+        (local.get $g)
+        (local.get $b)
+        (local.get $a)
+      )
+      (if 
+        (i32.and
+          (i32.eq
+            (local.get $x0)
+            (local.get $x1)
+          )
+          (i32.eq
+            (local.get $y0)
+            (local.get $y1)
+          )
+        )
+        (then return)
+      )
+
+      (local.set $e2
+        (i32.mul
+          (i32.const 2)
+          (local.get $err)
+        )
+      )
+
+      (if 
+        (i32.ge_s
+          (local.get $e2)
+          (local.get $dy)
+        )
+        (then
+          (local.set $err
+            (i32.add
+              (local.get $err)
+              (local.get $dy)
+            )
+          )
+          (local.set $x0
+            (i32.add
+              (local.get $x0)
+              (local.get $sx)
+            )
+          )
+        )
+      )
+
+      (if 
+        (i32.le_s
+          (local.get $e2)
+          (local.get $dx)
+        )
+        (then
+          (local.set $err
+            (i32.add
+              (local.get $err)
+              (local.get $dx)
+            )
+          )
+          (local.set $y0
+            (i32.add
+              (local.get $y0)
+              (local.get $sy)
+            )
+          )
+        )
+      )
+
+      (br $loop)
+    )
+  )
+
+  (func $get_vertex_in_screen_coods (param $vertex_num i32) (result i32 i32)
     (local $vertex_mem_location i32)
     (local $vertex_displacement_mem_location i32)
     (local $x f64)
@@ -522,26 +670,6 @@
     (local.set $y (local.get $temp2_y))
     (local.set $z (local.get $temp2_z))
 
-    ;; add perspective projection
-    ;; (local.set $x
-    ;;   (f64.div
-    ;;     (local.get $x)
-    ;;     (local.get $perspective_denominator)
-    ;;   )
-    ;; )
-    ;; (local.set $y
-    ;;   (f64.div
-    ;;     (local.get $y)
-    ;;     (local.get $perspective_denominator)
-    ;;   )
-    ;; )
-    ;; (local.set $z
-    ;;   (f64.div
-    ;;     (local.get $z)
-    ;;     (local.get $perspective_denominator)
-    ;;   )
-    ;; )
-    
     ;; convert x, y, z from (-1, 1) coordinates to canvas coordinates (0, WIDTH), etc.
     (local.set $x
       (call $map
@@ -571,17 +699,18 @@
       )
     )
 
-    (call $draw_pixel
-      ;; truncate float to ingteger (canvas coordinates)
-      (i32.trunc_sat_f64_s (local.get $x))
-      (i32.trunc_sat_f64_s (local.get $y))
-      (i32.trunc_sat_f64_s (local.get $z))
+    (i32.trunc_sat_f64_s (local.get $x))
+    (i32.trunc_sat_f64_s (local.get $y))
+  )
 
-      ;; r g b a
-      (i32.const 0x40)
-      (i32.const 0x70)
+  (func $connect_vertex (param $vertex_num i32)
+    (call $draw_line
+      (call $get_vertex_in_screen_coods (local.get $vertex_num))
+      (call $get_vertex_in_screen_coods (i32.add (local.get $vertex_num) (i32.const 1)))
       (i32.const 0xcc)
-      (i32.const 0xff)
+      (i32.const 0xcc)
+      (i32.const 0xcc)
+      (i32.const 0xcc)
     )
   )
 
@@ -698,7 +827,7 @@
 
     ;; draw points
     (call $for_each
-      (global.get $DRAW_VERTEX)
+      (global.get $CONNECT_VERTEX)
       (i32.const 0)
       (global.get $NUM_VERTICES)
       (i32.const 1)
