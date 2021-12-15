@@ -1,7 +1,7 @@
 (module
   ;; IMPORTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (import "Math" "cbrt" (func $cbrt (param f64) (result f64)))
+  (import "Math" "sqrt" (func $sqrt (param f64) (result f64)))
   (import "Math" "sin" (func $sin (param f64) (result f64)))
   (import "Math" "cos" (func $cos (param f64) (result f64)))
   (import "noise" "perlin_noise" (func $perlin_noise (param f64) (param f64) (param f64) (result f64)))
@@ -19,9 +19,9 @@
   (global $DRAW_VERTEX i32 (i32.const 1))
 
   ;; canvas data (no memory offset)
-  (global $WIDTH (export "WIDTH") i32 (i32.const 300))
-  (global $HEIGHT (export "HEIGHT") i32 (i32.const 300))
-  (global $DEPTH i32 (i32.const 300))
+  (global $WIDTH (export "WIDTH") i32 (i32.const 350))
+  (global $HEIGHT (export "HEIGHT") i32 (i32.const 350))
+  (global $DEPTH i32 (i32.const 350))
   (global $VIEW_DISTANCE f64 (f64.const 8))
   (global $DT f64 (f64.const 0.01))
   (global $Y_THETA (mut f64) (f64.const 1))
@@ -36,7 +36,7 @@
 
   ;; vertex data (after canvas data)
   (global $INITIAL_PX_BETWEEN_VERTICES (mut i32) (i32.const 0))
-  (global $NUM_VERTICES i32 (i32.const 1_000))
+  (global $NUM_VERTICES i32 (i32.const 100))
   ;; bytes per vertex (x, y, z) => (f64, f64, f64) => (8 bytes, 8 bytes, 8 bytes) => 24 bytes 
   (global $BYTES_PER_VERTEX i32 (i32.const 24))
   (global $VERTEX_MEMORY_OFFSET (mut i32) (i32.const 0))
@@ -130,16 +130,13 @@
  (func $init_vertices
     (local $vertex_mem_location i32)
     (local $x f64)
-    (local $y f64)
     (local $z f64)
     (local $width_float f64)
-    (local $height_float f64)
     (local $depth_float f64)
     (local $initial_px_between_vertices_float f64)
     (local $vertex_num i32)
 
     (local.set $width_float (f64.convert_i32_u (global.get $WIDTH)))
-    (local.set $height_float (f64.convert_i32_u (global.get $HEIGHT)))
     (local.set $depth_float (f64.convert_i32_u (global.get $DEPTH)))
     (local.set $initial_px_between_vertices_float (f64.convert_i32_u (global.get $INITIAL_PX_BETWEEN_VERTICES)))
     (local.set $vertex_mem_location
@@ -153,69 +150,50 @@
       (if (f64.lt (local.get $z) (local.get $depth_float))
         (then
 
-          ;; iterate through y
-          (local.set $y (f64.const 0))
-          (loop $loop_y
-            (if (f64.lt (local.get $y) (local.get $height_float))
+          ;; iterate through x
+          (local.set $x (f64.const 0))
+          (loop $loop_x
+            (if (f64.lt (local.get $x) (local.get $width_float))
               (then
 
-                ;; iterate through x
-                (local.set $x (f64.const 0))
-                (loop $loop_x
-                  (if (f64.lt (local.get $x) (local.get $width_float))
-                    (then
-
-                      ;; set vertices
-                      (f64.store 
-                        offset=0
-                        (local.get $vertex_mem_location)
-                        (call $map
-                          (local.get $x)
-                          (f64.const 0)
-                          (local.get $width_float)
-                          (f64.const -1)
-                          (f64.const 1)
-                        )
-                      )
-                      (f64.store 
-                        offset=8
-                        (local.get $vertex_mem_location)
-                        (call $map
-                          (local.get $y)
-                          (f64.const 0)
-                          (local.get $height_float)
-                          (f64.const -1)
-                          (f64.const 1)
-                        )
-                      )
-                      (f64.store 
-                        offset=16
-                        (local.get $vertex_mem_location)
-                        (call $map
-                          (local.get $z)
-                          (f64.const 0)
-                          (local.get $depth_float)
-                          (f64.const -1)
-                          (f64.const 1)
-                        )
-                      )
-
-                      (local.set $vertex_num (i32.add (local.get $vertex_num) (i32.const 1)))
-                      (local.set $vertex_mem_location
-                        (call $vertex_num_to_mem_location
-                          (local.get $vertex_num)
-                        )
-                      )
-
-                      (local.set $x (f64.add (local.get $x) (local.get $initial_px_between_vertices_float)))
-                      br $loop_x
-                    )
+                ;; set vertices
+                (f64.store 
+                  offset=0
+                  (local.get $vertex_mem_location)
+                  (call $map
+                    (local.get $x)
+                    (f64.const 0)
+                    (local.get $width_float)
+                    (f64.const -1)
+                    (f64.const 1)
+                  )
+                )
+                (f64.store 
+                  offset=8
+                  (local.get $vertex_mem_location)
+                  (f64.const 0)
+                )
+                (f64.store 
+                  offset=16
+                  (local.get $vertex_mem_location)
+                  (call $map
+                    (local.get $z)
+                    (f64.const 0)
+                    (local.get $depth_float)
+                    (f64.const -1)
+                    (f64.const 1)
                   )
                 )
 
+                (local.set $vertex_num (i32.add (local.get $vertex_num) (i32.const 1)))
+                (local.set $vertex_mem_location
+                  (call $vertex_num_to_mem_location
+                    (local.get $vertex_num)
+                  )
+                )
 
-                (local.set $y (f64.add (local.get $y) (local.get $initial_px_between_vertices_float)))
-                br $loop_y
+                (local.set $x (f64.add (local.get $x) (local.get $initial_px_between_vertices_float)))
+                br $loop_x
               )
             )
           )
@@ -659,20 +637,17 @@
     i32.mul
     global.set $CANVAS_MEMORY_LENGTH
 
-    ;; num_vertices = (width /distance_between_pixels) * (height / distance_between_pixels) * (depth / distance_between_pixels)
-    ;; num_vertices = (width * height * depth) / (distance_between_pixels ** 3)
-    ;; (distance_between_pixels ** 3) = (width * height * depth) / num_vertices
-    ;; distance_between_pixels = cbrt((width * height * depth) / num_vertices)
+    ;; num_vertices = (width / distance_between_pixels) * (depth / distance_between_pixels)
+    ;; num_vertices = (width * depth) / (distance_between_pixels ** 2)
+    ;; (distance_between_pixels ** 2) = (width * depth) / num_vertices
+    ;; distance_between_pixels = sqrt((width * depth) / num_vertices)
     (global.set $INITIAL_PX_BETWEEN_VERTICES
       (i32.trunc_sat_f64_u
-        (call $cbrt
+        (call $sqrt
           (f64.div
             (f64.convert_i32_u
               (i32.mul
-                (i32.mul
-                  (global.get $WIDTH)
-                  (global.get $HEIGHT)
-                )
+                (global.get $WIDTH)
                 (global.get $DEPTH)
               )
             )
