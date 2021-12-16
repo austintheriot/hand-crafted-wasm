@@ -287,12 +287,49 @@
     )
   )
 
-  ;; set canvas color as opaque white
+  ;; set canvas color as opaque black
   (func $clear_canvas
-    (memory.fill
+    (local $i i32)
+    (local $end_i i32)
+    (local.set $i 
       (global.get $CANVAS_MEMORY_OFFSET)
-      (i32.const 0) 
-      (i32.add (global.get $CANVAS_MEMORY_OFFSET) (global.get $CANVAS_MEMORY_LENGTH))
+    )
+    (local.set $end_i 
+      (i32.add 
+        (global.get $CANVAS_MEMORY_OFFSET) 
+        (global.get $CANVAS_MEMORY_LENGTH)
+      )
+    )
+    (loop $loop
+      (if (i32.lt_s (local.get $i) (local.get $end_i))
+        (then
+
+          (i32.store8
+            offset=0
+            (local.get $i)
+            (i32.const 0)
+          )
+          (i32.store8
+            offset=1
+            (local.get $i)
+            (i32.const 0)
+          )
+          (i32.store8
+            offset=2
+            (local.get $i)
+            (i32.const 0)
+          )
+          (i32.store8
+            offset=3
+            (local.get $i)
+            (i32.const 0xff)
+          )
+
+          (local.set $i (i32.add (local.get $i) (global.get $BYTES_PER_PX)))
+          br $loop
+        )
+        (else return)
+      )
     )
   )
 

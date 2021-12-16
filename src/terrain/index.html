@@ -4,7 +4,9 @@
   <style>
     body {
       display: flex;
+      flex-direction: column;
       justify-content: center;
+      align-items: center;
       margin: 0;
       position: 'relative';
       background-color: black;
@@ -23,11 +25,17 @@
       image-rendering: pixelated;
       image-rendering: crisp-edges;
     }
+    
+    button {
+      width: 'fit-content';
+      margin: 2rem;
+    }
   </style>
 </head>
 
 <body>
   <canvas></canvas>
+  <button>Save image</button>
   <script>
     let prevDragY = { current: 0 };
     let prevTouchY = { current: 0 };
@@ -52,7 +60,6 @@
         wasm.init();
 
         window.onkeydown = (e) => {
-          console.log(e)
           if (e.key === 'ArrowLeft') wasm.add_x_theta(0.05);
           else if (e.key === 'ArrowRight') wasm.add_x_theta(-0.05);
 
@@ -87,6 +94,13 @@
           const py = dy / height;
           wasm.add_x_theta(-py * 5);
         }
+
+        document.querySelector('button').onclick = () => {
+          const imgLink = document.createElement('a');
+          imgLink.href = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+          imgLink.download = 'water.png';
+          imgLink.click();
+        };
 
         window.onmouseup = (e) => mouseDown = false;
         window.onmouseleave = (e) => mouseDown = false;

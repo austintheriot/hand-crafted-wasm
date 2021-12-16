@@ -55,7 +55,6 @@
         wasm.init();
 
         window.onkeydown = (e) => {
-          console.log(e)
           if (e.key === 'ArrowLeft') wasm.add_x_theta(0.05);
           else if (e.key === 'ArrowRight') wasm.add_x_theta(-0.05);
 
