@@ -1,7 +1,7 @@
 /** @jest-environment node */
 const { setupWasmInstance } = require('../../utils/wasmUtils.js');
 
-const MODULE_NAME = 'water_plane';
+const MODULE_NAME = 'water';
 
 describe(`Test ${MODULE_NAME}`, () => {
   let wasm;

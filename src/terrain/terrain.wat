@@ -2,6 +2,7 @@
   ;; IMPORTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (import "Math" "sqrt" (func $sqrt (param f64) (result f64)))
+  (import "Math" "cbrt" (func $cbrt (param f64) (result f64)))
   (import "Math" "sin" (func $sin (param f64) (result f64)))
   (import "Math" "cos" (func $cos (param f64) (result f64)))
   (import "noise" "perlin_noise" (func $perlin_noise (param f64) (param f64) (param f64) (result f64)))
@@ -25,10 +26,11 @@
   (global $VIEW_DISTANCE f64 (f64.const 1))
   (global $DT f64 (f64.const 0.01))
   (global $X_THETA (mut f64) (f64.const -0.5))
-  (global $HEIGHT_DAMPING (mut f64) (f64.const 2))
+  (global $HEIGHT_DAMPING (mut f64) (f64.const 0.5))
   (global $DETAIL_MULTIPLIER (mut f64) (f64.const 2))
-  (global $SCALE_X (mut f64) (f64.const 1.5))
-  (global $SCALE_Y (mut f64) (f64.const 0.5))
+  (global $SCALE_X (mut f64) (f64.const 0.75))
+  (global $TRANSLATE_Y (mut f64) (f64.const 0.25))
+  (global $SCALE_Z (mut f64) (f64.const 0.25))
   (global $TIME (mut f64) (f64.const 0))
   (global $TIME_INCREMENT (mut f64) (f64.const 0.01))
   (global $NUM_PIXELS (mut i32) (i32.const 0))
@@ -561,7 +563,9 @@
 
     ;; shrink view
     (local.set $x (f64.mul (local.get $x) (global.get $SCALE_X)))
-    (local.set $y (f64.mul (local.get $y) (global.get $SCALE_Y)))
+    (local.set $z (f64.mul (local.get $z) (global.get $SCALE_Z)))
+
+    (local.set $y (f64.add (local.get $y) (global.get $TRANSLATE_Y)))
 
     ;; rotate about x axis
     ;; x' = x
@@ -661,11 +665,22 @@
 
   (func $connect_vertex (param $vertex_num i32)
     (local $next_row_neighbor i32)
+    (local $vertex_mem_location i32)
+    (local $z_zero_to_one f64)
 
     (local.set $next_row_neighbor
       (i32.add 
         (local.get $vertex_num)
         (global.get $NUM_VERTICES_SQRT)
+      )
+    )
+
+    ;; use z index to darken "incoming" vertices
+    (local.set $vertex_mem_location (call $vertex_num_to_mem_location (local.get $vertex_num)))
+    ;; cube root increases vision distance
+    (local.set $z_zero_to_one 
+      (call $cbrt
+         (f64.load offset=16 (local.get $vertex_mem_location))
       )
     )
 
@@ -685,8 +700,8 @@
         (call $draw_line
           (call $get_vertex_in_screen_coords (local.get $vertex_num))
           (call $get_vertex_in_screen_coords (i32.add (local.get $vertex_num) (i32.const 1)))
-          (i32.const 0x80)
-          (i32.const 0x50)
+          (i32.trunc_sat_f64_u (f64.mul (f64.const 0x80) (local.get $z_zero_to_one)))
+          (i32.trunc_sat_f64_u (f64.mul (f64.const 0x50) (local.get $z_zero_to_one)))
           (i32.const 0x00)
           (i32.const 0xff)
         )
@@ -702,8 +717,8 @@
         (call $draw_line
           (call $get_vertex_in_screen_coords (local.get $vertex_num))
           (call $get_vertex_in_screen_coords (local.get $next_row_neighbor))
-          (i32.const 0xa0)
-          (i32.const 0x30)
+          (i32.trunc_sat_f64_u (f64.mul (f64.const 0xa0) (local.get $z_zero_to_one)))
+          (i32.trunc_sat_f64_u (f64.mul (f64.const 0x30) (local.get $z_zero_to_one)))
           (i32.const 0x00)
           (i32.const 0xff)
         )
@@ -732,9 +747,9 @@
   (func (export "add_x_theta") (param f64)
     (global.set $X_THETA 
       (call $f64_clamp
-        (f64.const -1)
+        (f64.const -0.75)
         (f64.add (global.get $X_THETA) (local.get 0))
-        (f64.const 0)
+        (f64.const 0.75)
       )
     )
   )
