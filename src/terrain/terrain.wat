@@ -36,7 +36,8 @@
 
   ;; vertex data (after canvas data)
   (global $INITIAL_PX_BETWEEN_VERTICES (mut i32) (i32.const 0))
-  (global $NUM_VERTICES i32 (i32.const 225))
+  (global $NUM_VERTICES_SQRT i32 (i32.const 15))
+  (global $NUM_VERTICES (mut i32) (i32.const 225))
   ;; bytes per vertex (x, y, z) => (f64, f64, f64) => (8 bytes, 8 bytes, 8 bytes) => 24 bytes 
   (global $BYTES_PER_VERTEX i32 (i32.const 24))
   (global $VERTEX_MEMORY_OFFSET (mut i32) (i32.const 0))
@@ -704,13 +705,28 @@
   )
 
   (func $connect_vertex (param $vertex_num i32)
-    (call $draw_line
-      (call $get_vertex_in_screen_coods (local.get $vertex_num))
-      (call $get_vertex_in_screen_coods (i32.add (local.get $vertex_num) (i32.const 1)))
-      (i32.const 0xcc)
-      (i32.const 0xcc)
-      (i32.const 0xcc)
-      (i32.const 0xcc)
+    ;; draw next vertex if it's not the last in it's row
+    (if
+      (i32.ne
+        (i32.rem_u
+          (i32.add
+            (local.get $vertex_num)
+            (i32.const 1)
+          )
+          (global.get $NUM_VERTICES_SQRT)
+        )
+        (i32.const 0)
+      )
+      (then
+        (call $draw_line
+          (call $get_vertex_in_screen_coods (local.get $vertex_num))
+          (call $get_vertex_in_screen_coods (i32.add (local.get $vertex_num) (i32.const 1)))
+          (i32.const 0xcc)
+          (i32.const 0xcc)
+          (i32.const 0xcc)
+          (i32.const 0xcc)
+        )
+      )
     )
   )
 
@@ -759,6 +775,11 @@
     global.get $BYTES_PER_PX
     i32.mul
     global.set $CANVAS_MEMORY_LENGTH
+
+    global.get $NUM_VERTICES_SQRT
+    global.get $NUM_VERTICES_SQRT
+    i32.mul
+    global.set $NUM_VERTICES
 
     ;; num_vertices = (width / distance_between_pixels) * (depth / distance_between_pixels)
     ;; num_vertices = (width * depth) / (distance_between_pixels ** 2)
