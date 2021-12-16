@@ -19,18 +19,18 @@
   (global $CONNECT_VERTEX i32 (i32.const 1))
 
   ;; canvas data (no memory offset)
-  (global $WIDTH (export "WIDTH") i32 (i32.const 480))
-  (global $HEIGHT (export "HEIGHT") i32 (i32.const 480))
-  (global $DEPTH i32 (i32.const 480))
-  (global $VIEW_DISTANCE f64 (f64.const 8))
+  (global $WIDTH (export "WIDTH") i32 (i32.const 400))
+  (global $HEIGHT (export "HEIGHT") i32 (i32.const 400))
+  (global $DEPTH i32 (i32.const 400))
+  (global $VIEW_DISTANCE f64 (f64.const 1))
   (global $DT f64 (f64.const 0.01))
-  (global $Y_THETA (mut f64) (f64.const -0.75))
-  (global $X_THETA (mut f64) (f64.const 0.4))
-  (global $HEIGHT_DAMPING (mut f64) (f64.const 0.5))
+  (global $X_THETA (mut f64) (f64.const -0.5))
+  (global $HEIGHT_DAMPING (mut f64) (f64.const 2))
   (global $DETAIL_MULTIPLIER (mut f64) (f64.const 2))
-  (global $SCALE (mut f64) (f64.const 0.8))
+  (global $SCALE_X (mut f64) (f64.const 1.5))
+  (global $SCALE_Y (mut f64) (f64.const 0.5))
   (global $TIME (mut f64) (f64.const 0))
-  (global $TIME_INCREMENT (mut f64) (f64.const 0.005))
+  (global $TIME_INCREMENT (mut f64) (f64.const 0.01))
   (global $NUM_PIXELS (mut i32) (i32.const 0))
   (global $BYTES_PER_PX i32 (i32.const 4))
   (global $MEM_NOP i32 (i32.const -1))
@@ -39,15 +39,13 @@
 
   ;; vertex data (after canvas data)
   (global $INITIAL_PX_BETWEEN_VERTICES (mut i32) (i32.const 0))
-  (global $NUM_VERTICES_SQRT i32 (i32.const 80))
+  (global $NUM_VERTICES_SQRT i32 (i32.const 100))
   (global $NUM_VERTICES (mut i32) (i32.const 0))
   ;; bytes per vertex (x, y, z) => (f64, f64, f64) => (8 bytes, 8 bytes, 8 bytes) => 24 bytes 
   (global $BYTES_PER_VERTEX i32 (i32.const 24))
   (global $VERTEX_MEMORY_OFFSET (mut i32) (i32.const 0))
   (global $VERTEX_MEMORY_LENGTH (mut i32) (i32.const 0))
 
-  (global $VERTEX_DISPLACEMENT_OFFSET (mut i32) (i32.const 0))
-  
 
   ;; INTERNAL FUNCTIONS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -212,14 +210,14 @@
       (f64.mul
         (f64.add 
           (f64.load offset=0 (local.get $vertex_mem_location))
-          (global.get $TIME)
+          (f64.const 100)
         )
         (global.get $DETAIL_MULTIPLIER)
       )
     )
     (local.set $z 
       (f64.mul
-        (f64.add
+        (f64.sub
           (f64.load offset=16 (local.get $vertex_mem_location))
           (global.get $TIME)
         )
@@ -540,15 +538,10 @@
     (local $x f64)
     (local $y f64)
     (local $z f64)
-    (local $temp1_x f64)
-    (local $temp1_y f64)
-    (local $temp1_z f64)
     (local $temp2_x f64)
     (local $temp2_y f64)
     (local $temp2_z f64)
     (local $perspective_denominator f64)
-    (local $x_cos f64)
-    (local $z_sin f64)
 
     (local.set $vertex_mem_location (call $vertex_num_to_mem_location (local.get $vertex_num)))
     (local.set $x (f64.load offset=0 (local.get $vertex_mem_location)))
@@ -567,65 +560,23 @@
     )
 
     ;; shrink view
-    (local.set $x (f64.mul (local.get $x) (global.get $SCALE)))
-    (local.set $y (f64.mul (local.get $y) (global.get $SCALE)))
-    (local.set $z (f64.mul (local.get $z) (global.get $SCALE)))
-
-    ;; rotate about y axis
-    ;; x' = x cos θ + z sin θ
-    (local.set $temp1_x 
-      (f64.add
-        (f64.mul 
-          (local.get $x) 
-          (call $cos
-            (global.get $Y_THETA)
-          )
-        )
-        (f64.mul 
-          (local.get $z) 
-          (call $sin
-            (global.get $Y_THETA)
-          )
-        )
-      )
-    )
-    ;; y' = y
-    (local.set $temp1_y (local.get $y))
-    ;; z' = −x sin θ + z cos θ
-    (local.set $temp1_z
-      (f64.add
-        (f64.mul
-          (f64.mul 
-            (local.get $x) 
-            (call $sin
-              (global.get $Y_THETA)
-            )
-          )
-          (f64.const -1)
-        )
-        (f64.mul 
-          (local.get $z) 
-          (call $cos
-            (global.get $Y_THETA)
-          )
-        )
-      )
-    )
+    (local.set $x (f64.mul (local.get $x) (global.get $SCALE_X)))
+    (local.set $y (f64.mul (local.get $y) (global.get $SCALE_Y)))
 
     ;; rotate about x axis
     ;; x' = x
-    (local.set $temp2_x (local.get $temp1_x))
+    (local.set $temp2_x (local.get $x))
     ;; y' = y cos θ − z sin θ
     (local.set $temp2_y 
       (f64.sub
         (f64.mul 
-          (local.get $temp1_y) 
+          (local.get $y) 
           (call $cos
             (global.get $X_THETA)
           )
         )
         (f64.mul 
-          (local.get $temp1_z) 
+          (local.get $z) 
           (call $sin
             (global.get $X_THETA)
           )
@@ -636,13 +587,13 @@
     (local.set $temp2_z 
       (f64.add
         (f64.mul 
-          (local.get $temp1_y) 
+          (local.get $y) 
           (call $sin
             (global.get $X_THETA)
           )
         )
         (f64.mul 
-          (local.get $temp1_z) 
+          (local.get $z) 
           (call $cos
             (global.get $X_THETA)
           )
@@ -654,6 +605,26 @@
     (local.set $x (local.get $temp2_x))
     (local.set $y (local.get $temp2_y))
     (local.set $z (local.get $temp2_z))
+
+    ;; add perspective projection
+    (local.set $x
+      (f64.div
+        (local.get $x)
+        (local.get $perspective_denominator)
+      )
+    )
+    (local.set $y
+      (f64.div
+        (local.get $y)
+        (local.get $perspective_denominator)
+      )
+    )
+    (local.set $z
+      (f64.div
+        (local.get $z)
+        (local.get $perspective_denominator)
+      )
+    )
 
     ;; convert x, y, z from (-1, 1) coordinates to canvas coordinates (0, WIDTH), etc.
     (local.set $x
@@ -758,16 +729,12 @@
 
   ;; EXTERNAL FUNCTIONS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-  (func (export "add_y_theta") (param f64)
-    (global.set $Y_THETA (f64.add (global.get $Y_THETA) (local.get 0)))
-  )
   (func (export "add_x_theta") (param f64)
     (global.set $X_THETA 
       (call $f64_clamp
-        (f64.const -0.75)
+        (f64.const -1)
         (f64.add (global.get $X_THETA) (local.get 0))
-        (f64.const 0.75)
+        (f64.const 0)
       )
     )
   )
@@ -824,12 +791,6 @@
     global.get $CANVAS_MEMORY_LENGTH
     i32.add
     global.set $VERTEX_MEMORY_OFFSET
-
-    ;; set vertex memory copy offset
-    global.get $VERTEX_MEMORY_OFFSET
-    global.get $VERTEX_MEMORY_LENGTH
-    i32.add
-    global.set $VERTEX_DISPLACEMENT_OFFSET
 
     ;; distribute vertices equally throughout 3d space
     (call $init_vertices)

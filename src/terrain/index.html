@@ -30,10 +30,7 @@
   <canvas></canvas>
   <script>
     let prevDragY = { current: 0 };
-    let prevDragX = { current: 0 };
-
     let prevTouchY = { current: 0 };
-    let prevTouchX = { current: 0 };
 
     let mouseDown = false;
     Promise.all([
@@ -65,42 +62,30 @@
 
         window.ontouchstart = (e) => {
           prevTouchY.current = e.touches[0]?.clientY;
-          prevTouchX.current = e.touches[0]?.clientX;
         }
 
         window.ontouchmove = (e) => {
-          const { width, height } = canvas.getBoundingClientRect();
-          const nextClientX = e.touches[0]?.clientX;
+          const { height } = canvas.getBoundingClientRect();
           const nextClientY = e.touches[0]?.clientY;
-          const dx = nextClientX - prevTouchX.current;
           const dy = nextClientY - prevTouchY.current;
-          prevTouchX.current = nextClientX;
           prevTouchY.current = nextClientY;
-          const px = dx / width;
           const py = dy / height;
-          wasm.add_y_theta(-px * 5);
-          wasm.add_x_theta(py * 5);
+          wasm.add_x_theta(-py * 5);
         }
 
         window.onmousedown = (e) => {
           mouseDown = true;
-          prevDragX.current = e.clientX;
           prevDragY.current = e.clientY;
         }
 
         window.onmousemove = (e) => {
           if (!mouseDown) return;
-          const { width, height } = canvas.getBoundingClientRect();
-          const nextClientX = e.clientX;
+          const { height } = canvas.getBoundingClientRect();
           const nextClientY = e.clientY;
-          const dx = nextClientX - prevDragX.current;
           const dy = nextClientY - prevDragY.current;
-          prevDragX.current = nextClientX;
           prevDragY.current = nextClientY;
-          const px = dx / width;
           const py = dy / height;
-          wasm.add_y_theta(-px * 5);
-          wasm.add_x_theta(py * 5);
+          wasm.add_x_theta(-py * 5);
         }
 
         window.onmouseup = (e) => mouseDown = false;
