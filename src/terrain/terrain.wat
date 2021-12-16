@@ -734,20 +734,14 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   (func (export "add_y_theta") (param f64)
-    (global.set $Y_THETA 
-      (call $f64_clamp
-        (f64.const -1)
-        (f64.add (global.get $Y_THETA) (local.get 0))
-        (f64.const 1)
-      )
-    )
+    (global.set $Y_THETA (f64.add (global.get $Y_THETA) (local.get 0)))
   )
   (func (export "add_x_theta") (param f64)
     (global.set $X_THETA 
       (call $f64_clamp
-        (f64.const -1)
+        (f64.const -0.75)
         (f64.add (global.get $X_THETA) (local.get 0))
-        (f64.const 1)
+        (f64.const 0.75)
       )
     )
   )
