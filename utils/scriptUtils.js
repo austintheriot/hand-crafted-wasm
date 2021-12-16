@@ -111,6 +111,8 @@ const updateBytes = async () => {
     const { size: noiseFieldSize } = await asyncFs.stat('src/noise_field/noise_field_optimized.wasm');
     const { size: noiseWavesSize } = await asyncFs.stat('src/noise_waves/noise_waves_optimized.wasm');
     const { size: lorenzSystemSize } = await asyncFs.stat('src/lorenz_system/lorenz_system_optimized.wasm');
+    const { size: terrainSize } = await asyncFs.stat('src/terrain/terrain_optimized.wasm');
+    const { size: waterSize } = await asyncFs.stat('src/water/water_optimized.wasm');
     const readMeBytes = await asyncFs.readFile(readMePath);
     const readMe = readMeBytes.toString();
     const updatedReadme = readMe
@@ -118,7 +120,9 @@ const updateBytes = async () => {
       .replace(/(?<=Noise Field:)(.*)(?=bytes)/, ` ${perlinNoiseSize + noiseFieldSize} `)
       .replace(/(?<=Life:)(.*)(?=bytes)/, ` ${lifeSize} `)
       .replace(/(?<=Lorenz System:)(.*)(?=bytes)/, ` ${lorenzSystemSize} `)
-      .replace(/(?<=Noise Waves:)(.*)(?=bytes)/, ` ${noiseWavesSize + noiseFieldSize} `)
+      .replace(/(?<=Noise Waves:)(.*)(?=bytes)/, ` ${perlinNoiseSize + noiseWavesSize} `)
+      .replace(/(?<=Terrain Generator:)(.*)(?=bytes &)/, ` ${perlinNoiseSize + terrainSize} `)
+      .replace(/(?<=Water Emulator:)(.*)(?=bytes)/, ` ${perlinNoiseSize + waterSize} `)
       .replace(/(?<=Chaos Circle:)(.*)(?=bytes)/, ` ${perlinNoiseSize + chaosCircleSize} `);
     await asyncFs.writeFile(readMePath, updatedReadme);
   } catch (e) {

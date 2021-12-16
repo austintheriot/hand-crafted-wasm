@@ -41,14 +41,6 @@ An implementation of the classic Conway's Game Of Life, hand written in WebAssem
 
 ![Conway's Game of Life](/images/conways_game_of_life.png)
 
-## 3D Noise Waves: 1755 bytes
-
-3D particle waves. Use arrow keys or drag/touch the window to change the camera position. 
-
-[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/noise_waves)
-
-![Noise Waves](/images/noise_waves.png)
-
 ## 2D Chaos Circle: 1898 bytes
 
 An ever-contracting and expanding flower shape. Uses a custom all-WebAssembly port of processing/p5.js' perlin noise implementation.
@@ -56,6 +48,30 @@ An ever-contracting and expanding flower shape. Uses a custom all-WebAssembly po
 [See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/chaos_circle/)
 
 ![Chaos Circle](/images/chaos_circle.png)
+
+## 3D Noise Waves: 1988 bytes
+
+3D particle waves. Use arrow keys or drag/touch the window to change the camera position. 
+
+[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/noise_waves)
+
+![Noise Waves](/images/noise_waves.png)
+
+## 3D Terrain Generator: 2241 bytes & 3D Water Emulator: 2259 bytes
+
+3D Terrain Generator and 3D Water Emulator are two projects that draw heavily from one another. They both use Perlin noise for generating shapes and movement but in two different ways. 3D Terrain keeps each vertex "static" once it has been generated, whereas 3D Water generates a new random offset based on it's current location at every frame, creating a more dynamic randomized effect. For either project, use mouse or drag/touch the window to change camera position.
+
+Terrain: 
+
+[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/terrain)
+
+![Noise Waves](/images/terrain.png)
+
+Water: 
+
+[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/water)
+
+![Water](/images/water.png)
 
 ## More
 
