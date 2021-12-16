@@ -10,7 +10,7 @@
 
   ;; MEMORY
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (memory $memory (export "memory") 1000)
+  (memory $memory (export "memory") 2000)
 
   ;; function tables
   (type $ForEachCallback (func (param i32))) 
@@ -19,15 +19,17 @@
   (global $CONNECT_VERTEX i32 (i32.const 1))
 
   ;; canvas data (no memory offset)
-  (global $WIDTH (export "WIDTH") i32 (i32.const 500))
-  (global $HEIGHT (export "HEIGHT") i32 (i32.const 500))
-  (global $DEPTH i32 (i32.const 500))
+  (global $WIDTH (export "WIDTH") i32 (i32.const 480))
+  (global $HEIGHT (export "HEIGHT") i32 (i32.const 480))
+  (global $DEPTH i32 (i32.const 480))
   (global $VIEW_DISTANCE f64 (f64.const 8))
   (global $DT f64 (f64.const 0.01))
   (global $Y_THETA (mut f64) (f64.const 0.5))
   (global $X_THETA (mut f64) (f64.const 0.3))
+  (global $HEIGHT_DAMPING (mut f64) (f64.const 1))
   (global $SCALE (mut f64) (f64.const 0.55))
   (global $TIME (mut f64) (f64.const 0))
+  (global $TIME_INCREMENT (mut f64) (f64.const 0.0075))
   (global $NUM_PIXELS (mut i32) (i32.const 0))
   (global $BYTES_PER_PX i32 (i32.const 4))
   (global $MEM_NOP i32 (i32.const -1))
@@ -36,7 +38,7 @@
 
   ;; vertex data (after canvas data)
   (global $INITIAL_PX_BETWEEN_VERTICES (mut i32) (i32.const 0))
-  (global $NUM_VERTICES_SQRT i32 (i32.const 100))
+  (global $NUM_VERTICES_SQRT i32 (i32.const 80))
   (global $NUM_VERTICES (mut i32) (i32.const 0))
   ;; bytes per vertex (x, y, z) => (f64, f64, f64) => (8 bytes, 8 bytes, 8 bytes) => 24 bytes 
   (global $BYTES_PER_VERTEX i32 (i32.const 24))
@@ -243,7 +245,7 @@
           (call $perlin_noise (local.get $x) (local.get $y) (local.get $z))
           (f64.const 0.5)
         )
-        (f64.const 0.5)
+        (global.get $HEIGHT_DAMPING)
       )
     )
   )
@@ -704,6 +706,15 @@
   )
 
   (func $connect_vertex (param $vertex_num i32)
+    (local $next_row_neighbor i32)
+
+    (local.set $next_row_neighbor
+      (i32.add 
+        (local.get $vertex_num)
+        (global.get $NUM_VERTICES_SQRT)
+      )
+    )
+
     ;; draw next vertex if it's not the last in it's row
     (if
       (i32.ne
@@ -720,6 +731,23 @@
         (call $draw_line
           (call $get_vertex_in_screen_coods (local.get $vertex_num))
           (call $get_vertex_in_screen_coods (i32.add (local.get $vertex_num) (i32.const 1)))
+          (i32.const 0x10)
+          (i32.const 0x50)
+          (i32.const 0x80)
+          (i32.const 0xff)
+        )
+      )
+    )
+
+    (if
+      (i32.lt_u
+        (local.get $next_row_neighbor)
+        (global.get $NUM_VERTICES)
+      )
+      (then
+        (call $draw_line
+          (call $get_vertex_in_screen_coods (local.get $vertex_num))
+          (call $get_vertex_in_screen_coods (local.get $next_row_neighbor))
           (i32.const 0x10)
           (i32.const 0x50)
           (i32.const 0x80)
@@ -826,7 +854,7 @@
 
   ;; update state on every tick
   (func (export "update")
-    (global.set $TIME (f64.add (global.get $TIME) (f64.const 0.01)))
+    (global.set $TIME (f64.add (global.get $TIME) (global.get $TIME_INCREMENT)))
 
     ;; update vertex positions
     (call $for_each
