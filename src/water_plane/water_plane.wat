@@ -24,13 +24,12 @@
   (global $DEPTH i32 (i32.const 480))
   (global $VIEW_DISTANCE f64 (f64.const 8))
   (global $DT f64 (f64.const 0.01))
-  (global $Y_THETA (mut f64) (f64.const -0.75))
-  (global $X_THETA (mut f64) (f64.const 0.4))
-  (global $HEIGHT_DAMPING (mut f64) (f64.const 0.5))
-  (global $DETAIL_MULTIPLIER (mut f64) (f64.const 2))
-  (global $SCALE (mut f64) (f64.const 0.8))
+  (global $Y_THETA (mut f64) (f64.const 0))
+  (global $X_THETA (mut f64) (f64.const 0.3))
+  (global $HEIGHT_DAMPING (mut f64) (f64.const 1))
+  (global $SCALE (mut f64) (f64.const 0.55))
   (global $TIME (mut f64) (f64.const 0))
-  (global $TIME_INCREMENT (mut f64) (f64.const 0.005))
+  (global $TIME_INCREMENT (mut f64) (f64.const 0.0075))
   (global $NUM_PIXELS (mut i32) (i32.const 0))
   (global $BYTES_PER_PX i32 (i32.const 4))
   (global $MEM_NOP i32 (i32.const -1))
@@ -121,6 +120,16 @@
     )
   )
 
+  (func $vertex_displacement_mem_location (param $i i32) (result i32)
+    (i32.add 
+      (global.get $VERTEX_DISPLACEMENT_OFFSET)
+      (i32.mul
+        (global.get $BYTES_PER_VERTEX)
+        (local.get $i)
+      )
+    )
+  )
+
  (func $init_vertices
     (local $vertex_mem_location i32)
     (local $x f64)
@@ -202,37 +211,38 @@
 
   (func $update_vertex_offsets (param $vertex_num i32)
     (local $vertex_mem_location i32)
-    (local $vertex_num_as_float f64)
+    (local $vertex_displacement_mem_location i32)
     (local $x f64)
+    (local $y f64)
     (local $z f64)
 
     ;; load vertex data
     (local.set $vertex_mem_location (call $vertex_num_to_mem_location (local.get $vertex_num)))
+    (local.set $vertex_displacement_mem_location (call $vertex_displacement_mem_location (local.get $vertex_num)))
     (local.set $x 
-      (f64.mul
-        (f64.add 
-          (f64.load offset=0 (local.get $vertex_mem_location))
-          (global.get $TIME)
-        )
-        (global.get $DETAIL_MULTIPLIER)
+      (f64.add 
+        (f64.load offset=0 (local.get $vertex_mem_location))
+        (global.get $TIME)
+      )
+    )
+    (local.set $y 
+      (f64.add
+        (f64.load offset=8 (local.get $vertex_mem_location)) 
+        (global.get $TIME) 
       )
     )
     (local.set $z 
-      (f64.mul
-        (f64.add
-          (f64.load offset=16 (local.get $vertex_mem_location))
-          (global.get $TIME)
-        )
-        (global.get $DETAIL_MULTIPLIER)
+      (f64.add
+        (f64.load offset=16 (local.get $vertex_mem_location))
+        (global.get $TIME)
       )
     )
 
-    ;; update the y value to be different
     (f64.store offset=8
-      (local.get $vertex_mem_location)
+      (local.get $vertex_displacement_mem_location)
       (f64.mul
         (f64.sub
-          (call $perlin_noise (local.get $x) (local.get $z) (f64.const 0))
+          (call $perlin_noise (local.get $x) (local.get $y) (local.get $z))
           (f64.const 0.5)
         )
         (global.get $HEIGHT_DAMPING)
@@ -308,17 +318,17 @@
       )
     )
 
-    ;; ignore coordinates that fall outside of (-1, 1) range
-    (if (i32.eq (local.get $canvas_mem_index) (global.get $MEM_NOP))
-      (then return)
-    )
-
     (local.set $canvas_mem_value
       (i32.load8_u 
         (local.get $canvas_mem_index)
       ) 
     )
 
+    ;; ignore coordinates that fall outside of (-1, 1) range
+    (if (i32.eq (local.get $canvas_mem_index) (global.get $MEM_NOP))
+      (then return)
+    )
+    
     ;; add colors from previous pixels together (max out at 0xff for each color band)
     (i32.store8
       offset=0
@@ -535,8 +545,9 @@
     )
   )
 
-  (func $get_vertex_in_screen_coords (param $vertex_num i32) (result i32 i32)
+  (func $get_vertex_in_screen_coods (param $vertex_num i32) (result i32 i32)
     (local $vertex_mem_location i32)
+    (local $vertex_displacement_mem_location i32)
     (local $x f64)
     (local $y f64)
     (local $z f64)
@@ -551,9 +562,15 @@
     (local $z_sin f64)
 
     (local.set $vertex_mem_location (call $vertex_num_to_mem_location (local.get $vertex_num)))
+    (local.set $vertex_displacement_mem_location (call $vertex_displacement_mem_location (local.get $vertex_num)))
     (local.set $x (f64.load offset=0 (local.get $vertex_mem_location)))
     (local.set $y (f64.load offset=8 (local.get $vertex_mem_location)))
     (local.set $z (f64.load offset=16 (local.get $vertex_mem_location)))
+
+    ;; add in noise
+    (local.set $x (f64.add (local.get $x) (f64.load offset=0 (local.get $vertex_displacement_mem_location))))
+    (local.set $y (f64.add (local.get $y) (f64.load offset=8 (local.get $vertex_displacement_mem_location))))
+    (local.set $z (f64.add (local.get $z) (f64.load offset=16 (local.get $vertex_displacement_mem_location))))
 
     ;; denominator used for calculating perspective projection
     (local.set $perspective_denominator
@@ -712,11 +729,11 @@
       )
       (then
         (call $draw_line
-          (call $get_vertex_in_screen_coords (local.get $vertex_num))
-          (call $get_vertex_in_screen_coords (i32.add (local.get $vertex_num) (i32.const 1)))
-          (i32.const 0x80)
+          (call $get_vertex_in_screen_coods (local.get $vertex_num))
+          (call $get_vertex_in_screen_coods (i32.add (local.get $vertex_num) (i32.const 1)))
+          (i32.const 0x10)
           (i32.const 0x50)
-          (i32.const 0x00)
+          (i32.const 0x80)
           (i32.const 0xff)
         )
       )
@@ -729,11 +746,11 @@
       )
       (then
         (call $draw_line
-          (call $get_vertex_in_screen_coords (local.get $vertex_num))
-          (call $get_vertex_in_screen_coords (local.get $next_row_neighbor))
-          (i32.const 0xa0)
-          (i32.const 0x30)
-          (i32.const 0x00)
+          (call $get_vertex_in_screen_coods (local.get $vertex_num))
+          (call $get_vertex_in_screen_coods (local.get $next_row_neighbor))
+          (i32.const 0x10)
+          (i32.const 0x50)
+          (i32.const 0x80)
           (i32.const 0xff)
         )
       )
