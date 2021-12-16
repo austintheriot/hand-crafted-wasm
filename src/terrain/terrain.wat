@@ -19,13 +19,13 @@
   (global $CONNECT_VERTEX i32 (i32.const 1))
 
   ;; canvas data (no memory offset)
-  (global $WIDTH (export "WIDTH") i32 (i32.const 750))
-  (global $HEIGHT (export "HEIGHT") i32 (i32.const 750))
-  (global $DEPTH i32 (i32.const 750))
+  (global $WIDTH (export "WIDTH") i32 (i32.const 500))
+  (global $HEIGHT (export "HEIGHT") i32 (i32.const 500))
+  (global $DEPTH i32 (i32.const 500))
   (global $VIEW_DISTANCE f64 (f64.const 8))
   (global $DT f64 (f64.const 0.01))
-  (global $Y_THETA (mut f64) (f64.const 1))
-  (global $X_THETA (mut f64) (f64.const 0.5))
+  (global $Y_THETA (mut f64) (f64.const 0.5))
+  (global $X_THETA (mut f64) (f64.const 0.3))
   (global $SCALE (mut f64) (f64.const 0.55))
   (global $TIME (mut f64) (f64.const 0))
   (global $NUM_PIXELS (mut i32) (i32.const 0))
@@ -36,8 +36,8 @@
 
   ;; vertex data (after canvas data)
   (global $INITIAL_PX_BETWEEN_VERTICES (mut i32) (i32.const 0))
-  (global $NUM_VERTICES_SQRT i32 (i32.const 15))
-  (global $NUM_VERTICES (mut i32) (i32.const 225))
+  (global $NUM_VERTICES_SQRT i32 (i32.const 100))
+  (global $NUM_VERTICES (mut i32) (i32.const 0))
   ;; bytes per vertex (x, y, z) => (f64, f64, f64) => (8 bytes, 8 bytes, 8 bytes) => 24 bytes 
   (global $BYTES_PER_VERTEX i32 (i32.const 24))
   (global $VERTEX_MEMORY_OFFSET (mut i32) (i32.const 0))
@@ -307,12 +307,19 @@
   (func $draw_pixel (param $x i32) (param $y i32)
     (param $r i32) (param $g i32) (param $b i32) (param $a i32)
     (local $canvas_mem_index i32)
+    (local $canvas_mem_value i32)
 
     (local.set $canvas_mem_index 
       (call $canvas_coords_to_canvas_mem_index 
         (local.get $x)
         (local.get $y)
       )
+    )
+
+    (local.set $canvas_mem_value
+      (i32.load8_u 
+        (local.get $canvas_mem_index)
+      ) 
     )
 
     ;; ignore coordinates that fall outside of (-1, 1) range
@@ -326,9 +333,7 @@
       (local.get $canvas_mem_index)
       (call $i32_min
         (i32.add 
-          (i32.load8_u 
-            (local.get $canvas_mem_index)
-          ) 
+          (local.get $canvas_mem_value) 
           (local.get $r)
         )
         (i32.const 0xff)
@@ -339,9 +344,7 @@
       (local.get $canvas_mem_index)
       (call $i32_min
         (i32.add 
-          (i32.load8_u 
-            (local.get $canvas_mem_index)
-          ) 
+          (local.get $canvas_mem_value) 
           (local.get $g)
         )
         (i32.const 0xff)
@@ -352,9 +355,7 @@
       (local.get $canvas_mem_index)
       (call $i32_min
         (i32.add 
-          (i32.load8_u 
-            (local.get $canvas_mem_index)
-          ) 
+          (local.get $canvas_mem_value) 
           (local.get $b)
         )
         (i32.const 0xff)
@@ -365,9 +366,7 @@
       (local.get $canvas_mem_index)
       (call $i32_min
         (i32.add 
-          (i32.load8_u 
-            (local.get $canvas_mem_index)
-          ) 
+          (local.get $canvas_mem_value) 
           (local.get $a)
         )
         (i32.const 0xff)
@@ -721,10 +720,10 @@
         (call $draw_line
           (call $get_vertex_in_screen_coods (local.get $vertex_num))
           (call $get_vertex_in_screen_coods (i32.add (local.get $vertex_num) (i32.const 1)))
-          (i32.const 0xcc)
-          (i32.const 0xcc)
-          (i32.const 0xcc)
-          (i32.const 0xcc)
+          (i32.const 0x10)
+          (i32.const 0x50)
+          (i32.const 0x80)
+          (i32.const 0xff)
         )
       )
     )
