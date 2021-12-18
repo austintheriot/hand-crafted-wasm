@@ -5,7 +5,6 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
     "serve": "vite preview --host 0.0.0.0",
-    
     "clean-wasm": "node ./scripts/clean.js",
     "build-wasm:debug": "node ./scripts/buildDebug.js",
     "build-wasm:no-debug": "node ./scripts/buildNoDebug.js",
@@ -15,8 +14,11 @@
     "test-wasm": "npm run build-wasm && jest --watch"
   },
   "devDependencies": {
+    "@types/jsdom": "^16.2.13",
     "binaryen": "^102.0.0",
     "jest": "^27.3.1",
+    "jsdom": "^19.0.0",
+    "ts-node": "^10.4.0",
     "typescript": "^4.3.2",
     "vite": "^2.6.4",
     "wabt": "^1.0.24"

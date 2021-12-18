@@ -7,24 +7,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
   <style>
+    .container {
+      width: 100%;
+      max-width: 600px;
+      margin: 5rem auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 5rem;
+    }
+    .canvas {
+      width: 100%;
+    }
     .ascii-canvas {
+      min-width: fit-content;
       font-size: 4px;
       white-space: pre;
       background-color: black;
       color: white;
       font-family: Monospace;
       transform-origin: top left;
-      width: fit-content;
     }
   </style>
 </head>
 
 <body>
-  <canvas></canvas>
+  <div class="container">
+    <canvas class="canvas"></canvas>
   <p class="ascii-canvas"></p>
+  </div>
   <script>
     const measureFontBrightness = async () => {
-      const linkToFont = './Space_Mono/SpaceMono-Regular.ttf';
+      const linkToFont = './Roboto_Mono/RobotoMono-VariableFont_wght.ttf';
       const fontName = 'Monospace';
       const font = await new FontFace(fontName, `url(${linkToFont})`).load();
       document.fonts.add(font);
@@ -81,8 +96,17 @@
         };
       });
 
-      console.log({ ratings, normalizedRatings, maxBrightness, finalCharacterCodes });
+      const asciiArrayAsWasmHexCodesArray = [];
+      finalCharacterCodes.forEach((el) => {
+        asciiArrayAsWasmHexCodesArray.push(String.fromCharCode(92) + `0x${el.chCode.toString(16)}`);
+      })
+      
+      // output ASCII lookup table in the console
+      console.log(asciiArrayAsWasmHexCodesArray.join(''));
 
+
+      //////////////////////////////////////////////////////////////////////////////////////////
+      // RENDER IMAGE USING ASCII VALUES
 
       // draw image to canvas
       const testImage = new Image();
@@ -122,7 +146,22 @@
       const asciiString = testImagePixelsAsAscii.join('');
       console.log({testImagePixelsAsAscii});
 
-      document.querySelector('.ascii-canvas').textContent = asciiString;
+      const asciiCanvas = document.querySelector('.ascii-canvas');
+      asciiCanvas.textContent = asciiString;
+
+      // draw non-stretched image on canvas (for comparison against ascii version)
+      // text must be stretched x2 horizontally
+      canvas.width = SIZE
+      ctx.clearRect(0, 0, SIZE, SIZE);
+      ctx.drawImage(testImage, 0, 0, testImage.width, testImage.height, 0, 0, SIZE, SIZE);
+
+
+      // correct ascii size
+      const actualWidth = asciiCanvas.getBoundingClientRect().width;
+      const parentWidth = asciiCanvas.parentElement.getBoundingClientRect().width;
+      const multiplier = parentWidth / actualWidth;
+      console.log(multiplier);
+      asciiCanvas.style.transform = `scale(${multiplier}, ${multiplier})`;
     }
     measureFontBrightness();
   </script>
