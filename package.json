@@ -14,11 +14,8 @@
     "test-wasm": "npm run build-wasm && jest --watch"
   },
   "devDependencies": {
-    "@types/jsdom": "^16.2.13",
     "binaryen": "^102.0.0",
     "jest": "^27.3.1",
-    "jsdom": "^19.0.0",
-    "ts-node": "^10.4.0",
     "typescript": "^4.3.2",
     "vite": "^2.6.4",
     "wabt": "^1.0.24"
