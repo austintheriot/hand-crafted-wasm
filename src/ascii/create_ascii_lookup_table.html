@@ -46,14 +46,15 @@
     const hiddenCanvas = document.createElement('canvas');
     const hiddenCtx = hiddenCanvas.getContext('2d');
     // use visible canvas for rendering original image
+    const asciiCanvas = document.querySelector('.ascii-canvas');
     const canvas = document.querySelector('canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = CANVAS_SIZE;
     canvas.height = CANVAS_SIZE;
     hiddenCanvas.width = CANVAS_SIZE;
     hiddenCanvas.height = CANVAS_SIZE;
-
-    const measureFontBrightness = async () => {
+    
+    const main = async () => {
       const font = await new FontFace(FONT_NAME, `url(${LINK_TO_FONT})`).load();
       document.fonts.add(font);
   
@@ -62,9 +63,8 @@
 
       // iterate through "normal" ascii codes & get
       // average brightness of each character
-      for (let i = 32; i < 126; i++) {
-        const ch = String.fromCharCode(i);
-        hiddenCtx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      for (let chCode = 32; chCode < 126; chCode++) {
+        const ch = String.fromCharCode(chCode);
         hiddenCtx.fillStyle = 'rgba(0, 0, 0, 1)';
         hiddenCtx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
         hiddenCtx.fillStyle = 'rgba(255, 255, 255, 1)';
@@ -81,7 +81,7 @@
         }
         const averageBrightness = sum / total;
         maxBrightness = Math.max(maxBrightness, averageBrightness);
-        averages.push({ ch, averageBrightness, chCode: i });
+        averages.push({ ch, averageBrightness, chCode });
       }
 
       // sort from least to greatest average brightness
@@ -94,7 +94,7 @@
         averageBrightness: Math.trunc(averageBrightness * normalizeFactor),
       }));
 
-      // map character codes to values 0-255
+      // map character codes to values 0 -> 255
       const characterLookupArray = new Array(256).fill(null);
       let ratingI = 0;
       characterLookupArray.forEach((_, i) => {
@@ -113,58 +113,53 @@
       // output ASCII lookup table in the console
       console.log(wasmAsciiDataAsArray.join(''));
 
-
       //////////////////////////////////////////////////////////////////////////////////////////
       // DEMONSTRATION: RENDER IMAGE USING ASCII VALUES 
 
-      // draw image to canvas
+      // get source image and wait for it to load
       const testImage = new Image();
       testImage.src = './test_image.jpg';
       await new Promise((res) => { testImage.onload = res; });
-      // text must be stretched x2 horizontally
+
+      // draw non-stretched image on canvas (for comparison against ascii version)
+      ctx.drawImage(testImage, 0, 0, testImage.width, testImage.height, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+      // draw stretched image to canvas:
+      // text must be stretched x2 horizontally to be square in the final render
       const adjustedWidth = CANVAS_SIZE * 2;
       hiddenCanvas.width = adjustedWidth
       hiddenCtx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
       hiddenCtx.drawImage(testImage, 0, 0, testImage.width, testImage.height, 0, 0, adjustedWidth, CANVAS_SIZE);
 
       // get pixels of image
-      const testImagePixels = hiddenCtx.getImageData(0, 0, adjustedWidth, CANVAS_SIZE);
+      const testImageSourcePixels = hiddenCtx.getImageData(0, 0, adjustedWidth, CANVAS_SIZE);
       // get grayscale averages for each pixel
-      const testImagePixelAvgs = [];
-      for (let i = 0; i < testImagePixels.data.length; i += 4) {
-        const r = testImagePixels.data[i];
-        const g = testImagePixels.data[i + 1];
-        const b = testImagePixels.data[i + 2];
+      const testImagePixelAverages = [];
+      for (let i = 0; i < testImageSourcePixels.data.length; i += 4) {
+        const r = testImageSourcePixels.data[i];
+        const g = testImageSourcePixels.data[i + 1];
+        const b = testImageSourcePixels.data[i + 2];
 
         // weights each channel according to how our eye perceives color
         // then divides by 8 to get average brightness of each pixel
-        const brightness = (3 * r + 4 * g + b) >>> 3;
-        testImagePixelAvgs.push(brightness);
+        const averageBrightness = (3 * r + 4 * g + b) >>> 3;
+        testImagePixelAverages.push(averageBrightness);
       }
-      console.log({ testImagePixelAvgs });
 
+      // convert averages to ascii characters
       const testImagePixelsAsAscii = [];
-      testImagePixelAvgs.forEach((avg, i) => {
+      testImagePixelAverages.forEach((avg, i) => {
         testImagePixelsAsAscii.push(characterLookupArray[avg].ch);
         // add line breaks to the end of each row
         if (i % adjustedWidth === adjustedWidth - 1) {
           testImagePixelsAsAscii.push('\n');
         }
       });
-
       const asciiString = testImagePixelsAsAscii.join('');
-      console.log({ testImagePixelsAsAscii });
-
-      const asciiCanvas = document.querySelector('.ascii-canvas');
       asciiCanvas.textContent = asciiString;
-
-      // draw non-stretched image on canvas (for comparison against ascii version)
-      // text must be stretched x2 horizontally
-      canvas.width = CANVAS_SIZE
-      ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-      ctx.drawImage(testImage, 0, 0, testImage.width, testImage.height, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
     }
-    measureFontBrightness();
+    
+    main();
   </script>
 
 </body>
