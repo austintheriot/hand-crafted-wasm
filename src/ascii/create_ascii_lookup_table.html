@@ -42,14 +42,21 @@
     const FONT_NAME = 'Monospace';
     const CANVAS_SIZE = 200;
 
+    // use hidden canvas for ascii analysis
+    const hiddenCanvas = document.createElement('canvas');
+    const hiddenCtx = hiddenCanvas.getContext('2d');
+    // use visible canvas for rendering original image
+    const canvas = document.querySelector('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = CANVAS_SIZE;
+    canvas.height = CANVAS_SIZE;
+    hiddenCanvas.width = CANVAS_SIZE;
+    hiddenCanvas.height = CANVAS_SIZE;
+
     const measureFontBrightness = async () => {
       const font = await new FontFace(FONT_NAME, `url(${LINK_TO_FONT})`).load();
       document.fonts.add(font);
-      const canvas = document.querySelector('canvas');
-      canvas.width = CANVAS_SIZE;
-      canvas.height = CANVAS_SIZE;
-      const ctx = canvas.getContext('2d');
-
+  
       const averages = [];
       let maxBrightness = 0;
 
@@ -57,13 +64,13 @@
       // average brightness of each character
       for (let i = 32; i < 126; i++) {
         const ch = String.fromCharCode(i);
-        ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-        ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-        ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-        ctx.fillStyle = 'rgba(255, 255, 255, 1)';
-        ctx.font = `${CANVAS_SIZE / 2}px ${FONT_NAME}`;
-        ctx.fillText(ch, CANVAS_SIZE * 0.3, CANVAS_SIZE * 0.6, CANVAS_SIZE / 2);
-        const pixels = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        hiddenCtx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        hiddenCtx.fillStyle = 'rgba(0, 0, 0, 1)';
+        hiddenCtx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        hiddenCtx.fillStyle = 'rgba(255, 255, 255, 1)';
+        hiddenCtx.font = `${CANVAS_SIZE / 2}px ${FONT_NAME}`;
+        hiddenCtx.fillText(ch, CANVAS_SIZE * 0.3, CANVAS_SIZE * 0.6, CANVAS_SIZE / 2);
+        const pixels = hiddenCtx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
         let sum = 0;
         let total = 0;
         for (let j = 0; j < pixels.data.length; j += 4) {
@@ -116,12 +123,12 @@
       await new Promise((res) => { testImage.onload = res; });
       // text must be stretched x2 horizontally
       const adjustedWidth = CANVAS_SIZE * 2;
-      canvas.width = adjustedWidth
-      ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-      ctx.drawImage(testImage, 0, 0, testImage.width, testImage.height, 0, 0, adjustedWidth, CANVAS_SIZE);
+      hiddenCanvas.width = adjustedWidth
+      hiddenCtx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      hiddenCtx.drawImage(testImage, 0, 0, testImage.width, testImage.height, 0, 0, adjustedWidth, CANVAS_SIZE);
 
       // get pixels of image
-      const testImagePixels = ctx.getImageData(0, 0, adjustedWidth, CANVAS_SIZE);
+      const testImagePixels = hiddenCtx.getImageData(0, 0, adjustedWidth, CANVAS_SIZE);
       // get grayscale averages for each pixel
       const testImagePixelAvgs = [];
       for (let i = 0; i < testImagePixels.data.length; i += 4) {
