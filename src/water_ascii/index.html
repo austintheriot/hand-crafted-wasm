@@ -43,7 +43,7 @@
 
     Promise.all([
       fetch('../perlin_noise/perlin_noise_optimized.wasm'),
-      fetch('./ascii_optimized.wasm')
+      fetch('./water_ascii.wasm')
     ]).then(([res1, res2]) => Promise.all([
       res1.arrayBuffer(),
       res2.arrayBuffer()

@@ -1,7 +1,7 @@
 /** @jest-environment node */
 const { setupWasmInstance } = require('../../utils/wasmUtils.js');
 
-const MODULE_NAME = 'ascii';
+const MODULE_NAME = 'water_ascii';
 
 describe(`Test ${MODULE_NAME}`, () => {
   let wasm;
