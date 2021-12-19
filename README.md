@@ -49,29 +49,35 @@ An ever-contracting and expanding flower shape. Uses a custom all-WebAssembly po
 
 ![Chaos Circle](/images/chaos_circle.png)
 
-## 3D Noise Waves: 1988 bytes
+## 3D Noise Cloud: 1988 bytes
 
 3D particle waves. Use arrow keys or drag/touch the window to change the camera position. 
 
-[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/noise_waves)
+[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/noise_cloud)
 
-![Noise Waves](/images/noise_waves.png)
+![Noise Waves](/images/noise_cloud.png)
 
-## 3D Terrain Generator: 2241 bytes & 3D Water Emulator: 2288 bytes
+## 3D Terrain/Water Generator: 2241-2775 bytes
 
 3D Terrain Generator and 3D Water Emulator are two projects that draw heavily from one another. They both use Perlin noise for generating shapes and movement but in two different ways. 3D Terrain keeps each vertex "static" once it has been generated, whereas 3D Water generates a new random offset based on it's current location at every frame, creating a more dynamic randomized effect. For either project, use mouse or drag/touch the window to change camera position.
 
-**Terrain:**
+**Terrain: 2241 bytes**
 
 [See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/terrain)
 
 ![Noise Waves](/images/terrain.png)
 
-**Water:**
+**Water: 2288 bytes**
 
 [See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/water)
 
 ![Water](/images/water.png)
+
+**Water (Low-fi/ASCII version): 2775 bytes**
+
+[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/water_ascii)
+
+![Water ASCII](/images/water_ascii.png)
 
 ## More
 

@@ -109,21 +109,27 @@ const updateBytes = async () => {
     const { size: chaosCircleSize } = await asyncFs.stat('src/life/life_optimized.wasm');
     const { size: perlinNoiseSize } = await asyncFs.stat('src/perlin_noise/perlin_noise_optimized.wasm');
     const { size: noiseFieldSize } = await asyncFs.stat('src/noise_field/noise_field_optimized.wasm');
-    const { size: noiseWavesSize } = await asyncFs.stat('src/noise_waves/noise_waves_optimized.wasm');
+    const { size: noiseCloudSize } = await asyncFs.stat('src/noise_cloud/noise_cloud_optimized.wasm');
     const { size: lorenzSystemSize } = await asyncFs.stat('src/lorenz_system/lorenz_system_optimized.wasm');
     const { size: terrainSize } = await asyncFs.stat('src/terrain/terrain_optimized.wasm');
     const { size: waterSize } = await asyncFs.stat('src/water/water_optimized.wasm');
+    const { size: waterAsciiSize } = await asyncFs.stat('src/water_ascii/water_ascii_optimized.wasm');
     const readMeBytes = await asyncFs.readFile(readMePath);
     const readMe = readMeBytes.toString();
+    const terrainGeneratorSizeMin = perlinNoiseSize + Math.min(terrainSize, waterSize, waterAsciiSize);
+    const terrainGeneratorSizeMax = perlinNoiseSize + Math.max(terrainSize, waterSize, waterAsciiSize);
     const updatedReadme = readMe
       .replace(/(?<=Parametric Equations:)(.*)(?=bytes)/, ` ${parametricEquations} `)
       .replace(/(?<=Noise Field:)(.*)(?=bytes)/, ` ${perlinNoiseSize + noiseFieldSize} `)
       .replace(/(?<=Life:)(.*)(?=bytes)/, ` ${lifeSize} `)
       .replace(/(?<=Lorenz System:)(.*)(?=bytes)/, ` ${lorenzSystemSize} `)
-      .replace(/(?<=Noise Waves:)(.*)(?=bytes)/, ` ${perlinNoiseSize + noiseWavesSize} `)
-      .replace(/(?<=Terrain Generator:)(.*)(?=bytes &)/, ` ${perlinNoiseSize + terrainSize} `)
+      .replace(/(?<=Noise Cloud:)(.*)(?=bytes)/, ` ${perlinNoiseSize + noiseCloudSize} `)
       .replace(/(?<=Water Emulator:)(.*)(?=bytes)/, ` ${perlinNoiseSize + waterSize} `)
-      .replace(/(?<=Chaos Circle:)(.*)(?=bytes)/, ` ${perlinNoiseSize + chaosCircleSize} `);
+      .replace(/(?<=Chaos Circle:)(.*)(?=bytes)/, ` ${perlinNoiseSize + chaosCircleSize} `)
+      .replace(/(?<=Terrain\/Water Generator:)(.*)(?=bytes)/, ` ${terrainGeneratorSizeMin}-${terrainGeneratorSizeMax} `)
+      .replace(/(?<=Terrain:)(.*)(?=bytes)/, ` ${perlinNoiseSize + terrainSize} `)
+      .replace(/(?<=Water:)(.*)(?=bytes)/, ` ${perlinNoiseSize + waterSize} `)
+      .replace(/(?<=Water \(Low-fi\/ASCII version\):)(.*)(?=bytes)/, ` ${perlinNoiseSize + waterAsciiSize} `);
     await asyncFs.writeFile(readMePath, updatedReadme);
   } catch (e) {
     console.error(e);

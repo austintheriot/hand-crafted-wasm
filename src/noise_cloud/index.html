@@ -38,7 +38,7 @@
     let mouseDown = false;
     Promise.all([
       fetch('../perlin_noise/perlin_noise_optimized.wasm'),
-      fetch('./noise_waves_optimized.wasm')
+      fetch('./noise_cloud_optimized.wasm')
     ]).then(([res1, res2]) => Promise.all([
       res1.arrayBuffer(),
       res2.arrayBuffer()
