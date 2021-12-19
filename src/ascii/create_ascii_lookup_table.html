@@ -95,7 +95,7 @@
       }));
 
       // map character codes to values 0 -> 255
-      const characterLookupArray = new Array(256).fill(null);
+      const characterLookupArray = new Array(255).fill(null);
       let ratingI = 0;
       characterLookupArray.forEach((_, i) => {
         const rating = normalizedAverages[ratingI];
@@ -107,7 +107,7 @@
 
       const wasmAsciiDataAsArray = [];
       characterLookupArray.forEach((el) => {
-        wasmAsciiDataAsArray.push(String.fromCharCode(92) + `0x${el.chCode.toString(16)}`);
+        wasmAsciiDataAsArray.push(String.fromCharCode(92) + `${el.chCode.toString(16)}`);
       })
 
       // output ASCII lookup table in the console

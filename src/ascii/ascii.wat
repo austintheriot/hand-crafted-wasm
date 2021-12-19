@@ -9,8 +9,31 @@
   (import "console" "log" (func $log_float (param f64)))
 
   ;; MEMORY
+  ;; canvas memory (RGBA: 4 bytes per pixel)
+  ;; ascii canvas memory (ASCII character: 1 byte per pixel)
+  ;; vertex memory (3 f64 coordinates per vertex)
+  ;; vertex displacement memory (3 f64 displacements per vertex)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (memory $memory (export "memory") 2000)
+
+  (data $data (i32.const 0) 
+    ;; 0-255: Pixel value -> ASCII lookup table for Roboto Mono
+    "\20\20\60\60\60\60\60\60\60\60\60\60\60\60\60\60\60"
+    "\60\60\60\60\60\60\60\60\60\60\60\60\60\60\27\2e\2e" 
+    "\2e\2e\2e\2e\2e\2e\2e\2e\2e\2e\2e\5e\5e\5e\5e\5e\5e"
+    "\5e\5e\5e\22\22\22\22\22\22\22\22\2c\5f\2d\2d\2d\2d"
+    "\2d\2d\3a\3a\3a\3a\3a\3a\3a\3a\3a\3a\3a\3a\3a\3a\3a"
+    "\3a\3a\3a\5c\5c\5c\5c\5c\5c\5c\5c\5c\5c\5c\2f\3b\21"
+    "\21\7c\2a\2a\2b\2b\2b\2b\2b\28\28\28\28\29\3d\3d\3d"
+    "\3e\3c\37\37\5b\5b\5b\5b\5d\31\3f\3f\3f\3f\69\6c\6c"
+    "\6c\6c\7b\7b\7b\7b\7d\72\74\74\74\74\49\76\76\76\76"
+    "\6a\6a\4a\4a\4a\4a\4a\4a\63\75\33\7a\6f\6f\6f\6f\6f"
+    "\6f\6f\6e\32\32\4c\59\34\35\66\43\25\73\78\56\26\30"
+    "\61\54\54\54\54\54\36\79\65\39\5a\68\46\6b\77\55\24"
+    "\50\4f\44\44\44\40\40\53\47\47\58\38\62\41\41\67\64"
+    "\4b\4b\4b\4b\6d\6d\6d\6d\6d\52\45\70\70\71\48\4e\4e"
+    "\4e\23\23\42\57\57\57\51\51\51\51\4d\4d\4d\4d\4d\4d"
+  )
 
   ;; function tables
   (type $ForEachCallback (func (param i32))) 
@@ -19,9 +42,9 @@
   (global $CONNECT_VERTEX i32 (i32.const 1))
 
   ;; canvas data (no memory offset)
-  (global $WIDTH (export "WIDTH") i32 (i32.const 480))
-  (global $HEIGHT (export "HEIGHT") i32 (i32.const 480))
-  (global $DEPTH i32 (i32.const 480))
+  (global $WIDTH (export "WIDTH") i32 (i32.const 40))
+  (global $HEIGHT (export "HEIGHT") i32 (i32.const 40))
+  (global $DEPTH i32 (i32.const 40))
   (global $VIEW_DISTANCE f64 (f64.const 8))
   (global $DT f64 (f64.const 0.01))
   (global $Y_THETA (mut f64) (f64.const 0.6))
@@ -33,12 +56,14 @@
   (global $NUM_PIXELS (mut i32) (i32.const 0))
   (global $BYTES_PER_PX i32 (i32.const 4))
   (global $MEM_NOP i32 (i32.const -1))
-  (global $CANVAS_MEMORY_OFFSET (export "CANVAS_MEMORY_OFFSET") i32 (i32.const 0)) 
+  (global $CANVAS_MEMORY_OFFSET (export "CANVAS_MEMORY_OFFSET") i32 (i32.const 256)) 
   (global $CANVAS_MEMORY_LENGTH (export "CANVAS_MEMORY_LENGTH") (mut i32) (i32.const 0))
+  (global $ASCII_CANVAS_MEMORY_OFFSET (export "ASCII_CANVAS_MEMORY_OFFSET") (mut i32) (i32.const 0)) 
+  (global $ASCII_CANVAS_MEMORY_LENGTH (export "ASCII_CANVAS_MEMORY_LENGTH") (mut i32) (i32.const 0))
 
   ;; vertex data (after canvas data)
   (global $INITIAL_PX_BETWEEN_VERTICES (mut i32) (i32.const 0))
-  (global $NUM_VERTICES_SQRT i32 (i32.const 80))
+  (global $NUM_VERTICES_SQRT i32 (i32.const 4))
   (global $NUM_VERTICES (mut i32) (i32.const 0))
   ;; bytes per vertex (x, y, z) => (f64, f64, f64) => (8 bytes, 8 bytes, 8 bytes) => 24 bytes 
   (global $BYTES_PER_VERTEX i32 (i32.const 24))
@@ -286,6 +311,8 @@
     i32.add
     global.get $BYTES_PER_PX
     i32.mul
+    global.get $CANVAS_MEMORY_OFFSET
+    i32.add
   )
 
   ;; get min between two i32 values
@@ -340,6 +367,14 @@
         )
         (else return)
       )
+    )
+  )
+
+  (func $clear_ascii_canvas
+    (memory.fill
+      (global.get $ASCII_CANVAS_MEMORY_OFFSET)
+      (i32.const 0x20) ;; space character
+      (i32.add (global.get $ASCII_CANVAS_MEMORY_OFFSET) (global.get $ASCII_CANVAS_MEMORY_LENGTH))
     )
   )
 
@@ -409,6 +444,83 @@
           (local.get $a)
         )
         (i32.const 0xff)
+      )
+    )
+  )
+
+  ;; iterate through canvas pixels and convert to ascii characters
+  (func $draw_canvas_to_ascii_canvas
+    (local $canvas_mem_address i32)
+    (local $ascii_canvas_mem_address i32)
+    (local $r i32)
+    (local $g i32)
+    (local $b i32)
+    (local $average_brightness i32)
+    (local $ascii_code i32)
+
+    (local.set $canvas_mem_address (global.get $CANVAS_MEMORY_OFFSET))
+    (local.set $ascii_canvas_mem_address (global.get $ASCII_CANVAS_MEMORY_OFFSET))
+
+    (loop $loop
+      (if (i32.lt_u (local.get $canvas_mem_address) (global.get $CANVAS_MEMORY_LENGTH))
+        (then
+          ;; get each color cheannel value
+          (local.set $r (i32.load8_u offset=0 (local.get $canvas_mem_address)))
+          (local.set $g (i32.load8_u offset=1 (local.get $canvas_mem_address)))
+          (local.set $b (i32.load8_u offset=2 (local.get $canvas_mem_address)))
+
+          ;; get average brightness
+          (local.set $average_brightness
+            (i32.shr_u
+              (i32.add
+                (local.get $b)
+                (i32.add 
+                  (i32.mul
+                    (local.get $g)
+                    (i32.const 4)
+                  )
+                  (i32.mul
+                    (local.get $r)
+                    (i32.const 3)
+                  )
+                )
+              )
+              (i32.const 3)
+            )
+          )
+
+          ;; convert average brightness into ascii character
+          ;; and store ascii character in ascii canvas
+          (if 
+            (i32.and
+              (i32.gt_s
+                (local.get $average_brightness)
+                (i32.const 0)
+              )
+              (i32.lt_s
+                (local.get $average_brightness)
+                (i32.const 256)
+              )
+            )
+            (then
+              (local.set $ascii_code
+                (i32.load8_u 
+                  (local.get $average_brightness)
+                )
+              )
+              (i32.store8
+                (local.get $ascii_canvas_mem_address)
+                (local.get $ascii_code)
+              )
+            )
+          )
+          
+
+          (local.set $canvas_mem_address (i32.add (local.get $canvas_mem_address) (global.get $BYTES_PER_PX)))
+          (local.set $ascii_canvas_mem_address (i32.add (local.get $ascii_canvas_mem_address) (i32.const 1)))
+          br $loop
+        )
+        (else return)
       )
     )
   )
@@ -865,6 +977,18 @@
       )
     )
 
+    ;; set ascii canvas memory length
+    global.get $NUM_PIXELS
+    global.set $ASCII_CANVAS_MEMORY_LENGTH
+
+    ;; set ascii canvas memory offset
+    global.get $CANVAS_MEMORY_OFFSET
+    global.get $CANVAS_MEMORY_LENGTH
+    i32.add
+    global.set $ASCII_CANVAS_MEMORY_OFFSET
+
+    (call $clear_ascii_canvas)
+
     ;; set vertex memory length
     global.get $NUM_VERTICES
     global.get $BYTES_PER_VERTEX
@@ -874,8 +998,8 @@
     global.set $VERTEX_MEMORY_LENGTH
 
     ;; set vertex memory offset
-    global.get $CANVAS_MEMORY_OFFSET
-    global.get $CANVAS_MEMORY_LENGTH
+    global.get $ASCII_CANVAS_MEMORY_OFFSET
+    global.get $ASCII_CANVAS_MEMORY_LENGTH
     i32.add
     global.set $VERTEX_MEMORY_OFFSET
 
@@ -911,5 +1035,8 @@
       (global.get $NUM_VERTICES)
       (i32.const 1)
     )
+
+    ;; draw normal pixels as ascii characters
+    (call $draw_canvas_to_ascii_canvas)
   )
 )

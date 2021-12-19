@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 
 <head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
   <style>
     body {
       display: flex;
@@ -30,11 +33,21 @@
       margin: 2rem;
       width: fit-content;
     }
+
+    .ascii-canvas {
+      font-size: 8px;
+      white-space: pre;
+      background-color: black;
+      color: white;
+      /* custom font loaded in by JavaScript below */
+      font-family: 'Roboto Mono', monospace;
+    }
   </style>
 </head>
 
 <body>
   <canvas></canvas>
+  <p class="ascii-canvas"></p>
   <button>Save image</button>
   <script>
     let prevDragY = { current: 0 };
@@ -44,6 +57,9 @@
     let prevTouchX = { current: 0 };
 
     let mouseDown = false;
+
+    const asciiCanvas = document.querySelector('.ascii-canvas');
+
     Promise.all([
       fetch('../perlin_noise/perlin_noise_optimized.wasm'),
       fetch('./ascii_optimized.wasm')
@@ -123,20 +139,51 @@
         // get reference to canvas image data in wasm's linear memory
         const canvasData = new Uint8Array(
           wasm.memory.buffer,
-          wasm.CANVAS_MEMORY_OFFSET,
-          wasm.CANVAS_MEMORY_LENGTH
+          wasm.CANVAS_MEMORY_OFFSET.value,
+          wasm.CANVAS_MEMORY_LENGTH.value,
         );
 
         // transform wasm linear memory to image data
         const imageData = ctx.createImageData(wasm.WIDTH, wasm.HEIGHT);
-        imageData.data.set(canvasData);
-        ctx.putImageData(imageData, 0, 0);
+
+        // get ascii data from memory
+        const asciiData = new Uint8Array(
+          wasm.memory.buffer,
+          wasm.ASCII_CANVAS_MEMORY_OFFSET.value,
+          wasm.ASCII_CANVAS_MEMORY_LENGTH.value,
+        );
+
 
         // animate
         (async function animate() {
+          // update vertex positions
           wasm.update();
+
+          // draw image data to canvas
           imageData.data.set(canvasData);
           ctx.putImageData(imageData, 0, 0);
+
+          // "draw" ascii character data element
+          const asciiCharactersArray = new Array(asciiData.length).fill("");
+          asciiCharactersArray.forEach((_, i) => {
+            asciiCharactersArray[i] = String.fromCharCode(asciiData[i]);
+          });
+          const asciiCharacters = asciiCharactersArray.join("");
+
+          // split string by width of canvas
+          const lineSplitAsciiCharacters = [];
+          for (
+            let lineStart = 0, lineEnd = wasm.WIDTH.value;
+            lineStart < asciiCharacters.length;
+            lineStart += wasm.WIDTH.value, lineEnd += wasm.WIDTH.value
+          ) {
+            lineSplitAsciiCharacters.push(asciiCharacters.slice(lineStart, lineEnd));
+          }
+          const finalString = lineSplitAsciiCharacters.join('\n');
+          asciiCanvas.textContent = finalString;
+
+          console.log(finalString);
+
           requestAnimationFrame(animate);
         })();
       }).catch((e) => console.error(e));
