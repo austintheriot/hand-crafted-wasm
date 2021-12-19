@@ -42,9 +42,9 @@
   (global $CONNECT_VERTEX i32 (i32.const 1))
 
   ;; canvas data (no memory offset)
-  (global $WIDTH (export "WIDTH") i32 (i32.const 480))
-  (global $HEIGHT (export "HEIGHT") i32 (i32.const 480))
-  (global $DEPTH i32 (i32.const 480))
+  (global $WIDTH (export "WIDTH") i32 (i32.const 200))
+  (global $HEIGHT (export "HEIGHT") i32 (i32.const 200))
+  (global $DEPTH i32 (i32.const 200))
   (global $VIEW_DISTANCE f64 (f64.const 8))
   (global $DT f64 (f64.const 0.01))
   (global $Y_THETA (mut f64) (f64.const 0.6))
@@ -63,7 +63,7 @@
 
   ;; vertex data (after canvas data)
   (global $INITIAL_PX_BETWEEN_VERTICES (mut i32) (i32.const 0))
-  (global $NUM_VERTICES_SQRT i32 (i32.const 80))
+  (global $NUM_VERTICES_SQRT i32 (i32.const 20))
   (global $NUM_VERTICES (mut i32) (i32.const 0))
   ;; bytes per vertex (x, y, z) => (f64, f64, f64) => (8 bytes, 8 bytes, 8 bytes) => 24 bytes 
   (global $BYTES_PER_VERTEX i32 (i32.const 24))

@@ -6,50 +6,30 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
   <style>
     body {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      margin: 0;
       position: 'relative';
       background-color: black;
     }
 
-    canvas {
-      width: 100vmin;
-      max-width: 1000px;
-      object-fit: contain;
-      touch-action: none;
-      /* for debugging */
-      background-color: black;
-      cursor: grab;
-
-      /* default is to smooth edges of pixels on canvas */
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-    }
-
-    button {
-      margin: 2rem;
-      width: fit-content;
-    }
-
     .ascii-canvas {
-      font-size: 0.2vw;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.75vmin;
+      line-height: 1;
       white-space: pre;
       background-color: black;
       color: white;
       /* custom font loaded in by JavaScript below */
       font-family: 'Roboto Mono', monospace;
+      user-select: none;
       cursor: grab;
     }
   </style>
 </head>
 
 <body>
-  <canvas></canvas>
   <p class="ascii-canvas"></p>
-  <button>Save image</button>
   <script>
     let prevDragY = { current: 0 };
     let prevDragX = { current: 0 };
@@ -72,11 +52,6 @@
         const { instance: { exports: { perlin_noise } } } = await WebAssembly.instantiate(bytes1, { console, Math });
         return WebAssembly.instantiate(bytes2, { noise: { perlin_noise }, Math, console });
       }).then(({ instance: { exports: wasm } }) => {
-        // setup canvas & data
-        const canvas = document.querySelector('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = wasm.WIDTH;
-        canvas.height = wasm.HEIGHT;
         wasm.init();
 
         window.onkeydown = (e) => {
@@ -93,7 +68,7 @@
         }
 
         window.ontouchmove = (e) => {
-          const { width, height } = canvas.getBoundingClientRect();
+          const { width, height } = asciiCanvas.getBoundingClientRect();
           const nextClientX = e.touches[0]?.clientX;
           const nextClientY = e.touches[0]?.clientY;
           const dx = nextClientX - prevTouchX.current;
@@ -114,7 +89,7 @@
 
         window.onmousemove = (e) => {
           if (!mouseDown) return;
-          const { width, height } = canvas.getBoundingClientRect();
+          const { width, height } = asciiCanvas.getBoundingClientRect();
           const nextClientX = e.clientX;
           const nextClientY = e.clientY;
           const dx = nextClientX - prevDragX.current;
@@ -130,23 +105,6 @@
         window.onmouseup = (e) => mouseDown = false;
         window.onmouseleave = (e) => mouseDown = false;
 
-        document.querySelector('button').onclick = () => {
-          const imgLink = document.createElement('a');
-          imgLink.href = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
-          imgLink.download = 'terrain.png';
-          imgLink.click();
-        };
-
-        // get reference to canvas image data in wasm's linear memory
-        const canvasData = new Uint8Array(
-          wasm.memory.buffer,
-          wasm.CANVAS_MEMORY_OFFSET.value,
-          wasm.CANVAS_MEMORY_LENGTH.value,
-        );
-
-        // transform wasm linear memory to image data
-        const imageData = ctx.createImageData(wasm.WIDTH, wasm.HEIGHT);
-
         // get ascii data from memory
         const asciiData = new Uint8Array(
           wasm.memory.buffer,
@@ -159,10 +117,6 @@
         (async function animate() {
           // update vertex positions
           wasm.update();
-
-          // draw image data to canvas
-          imageData.data.set(canvasData);
-          ctx.putImageData(imageData, 0, 0);
 
           // "draw" ascii character data element
           const asciiCharactersArray = new Array(asciiData.length).fill("");
@@ -181,6 +135,7 @@
             lineSplitAsciiCharacters.push(asciiCharacters.slice(lineStart, lineEnd));
           }
           const finalString = lineSplitAsciiCharacters.join('\n');
+
           asciiCanvas.textContent = finalString;
 
           requestAnimationFrame(animate);
