@@ -35,12 +35,13 @@
     }
 
     .ascii-canvas {
-      font-size: 8px;
+      font-size: 0.2vw;
       white-space: pre;
       background-color: black;
       color: white;
       /* custom font loaded in by JavaScript below */
       font-family: 'Roboto Mono', monospace;
+      cursor: grab;
     }
   </style>
 </head>
@@ -181,8 +182,6 @@
           }
           const finalString = lineSplitAsciiCharacters.join('\n');
           asciiCanvas.textContent = finalString;
-
-          console.log(finalString);
 
           requestAnimationFrame(animate);
         })();

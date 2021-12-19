@@ -42,9 +42,9 @@
   (global $CONNECT_VERTEX i32 (i32.const 1))
 
   ;; canvas data (no memory offset)
-  (global $WIDTH (export "WIDTH") i32 (i32.const 40))
-  (global $HEIGHT (export "HEIGHT") i32 (i32.const 40))
-  (global $DEPTH i32 (i32.const 40))
+  (global $WIDTH (export "WIDTH") i32 (i32.const 480))
+  (global $HEIGHT (export "HEIGHT") i32 (i32.const 480))
+  (global $DEPTH i32 (i32.const 480))
   (global $VIEW_DISTANCE f64 (f64.const 8))
   (global $DT f64 (f64.const 0.01))
   (global $Y_THETA (mut f64) (f64.const 0.6))
@@ -63,7 +63,7 @@
 
   ;; vertex data (after canvas data)
   (global $INITIAL_PX_BETWEEN_VERTICES (mut i32) (i32.const 0))
-  (global $NUM_VERTICES_SQRT i32 (i32.const 4))
+  (global $NUM_VERTICES_SQRT i32 (i32.const 80))
   (global $NUM_VERTICES (mut i32) (i32.const 0))
   ;; bytes per vertex (x, y, z) => (f64, f64, f64) => (8 bytes, 8 bytes, 8 bytes) => 24 bytes 
   (global $BYTES_PER_VERTEX i32 (i32.const 24))
@@ -370,11 +370,31 @@
     )
   )
 
+  ;; set ascii canvas to be all spaces
   (func $clear_ascii_canvas
-    (memory.fill
+    (local $i i32)
+    (local $end_i i32)
+    (local.set $i 
       (global.get $ASCII_CANVAS_MEMORY_OFFSET)
-      (i32.const 0x20) ;; space character
-      (i32.add (global.get $ASCII_CANVAS_MEMORY_OFFSET) (global.get $ASCII_CANVAS_MEMORY_LENGTH))
+    )
+    (local.set $end_i 
+      (i32.add 
+        (global.get $ASCII_CANVAS_MEMORY_OFFSET) 
+        (global.get $ASCII_CANVAS_MEMORY_LENGTH)
+      )
+    )
+    (loop $loop
+      (if (i32.lt_s (local.get $i) (local.get $end_i))
+        (then
+          (i32.store8
+            (local.get $i)
+            (i32.const 0x20)
+          )
+          (local.set $i (i32.add (local.get $i) (i32.const 1)))
+          br $loop
+        )
+        (else return)
+      )
     )
   )
 
@@ -987,8 +1007,6 @@
     i32.add
     global.set $ASCII_CANVAS_MEMORY_OFFSET
 
-    (call $clear_ascii_canvas)
-
     ;; set vertex memory length
     global.get $NUM_VERTICES
     global.get $BYTES_PER_VERTEX
@@ -1035,6 +1053,8 @@
       (global.get $NUM_VERTICES)
       (i32.const 1)
     )
+
+    (call $clear_ascii_canvas)
 
     ;; draw normal pixels as ascii characters
     (call $draw_canvas_to_ascii_canvas)
