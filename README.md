@@ -55,7 +55,7 @@ An ever-contracting and expanding flower shape. Uses a custom all-WebAssembly po
 
 [See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/noise_cloud)
 
-![Noise Waves](/images/noise_cloud.png)
+![Noise Cloud](/images/noise_cloud.png)
 
 ## 3D Terrain/Water Generator: 2241-2775 bytes
 
@@ -65,7 +65,7 @@ An ever-contracting and expanding flower shape. Uses a custom all-WebAssembly po
 
 [See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/terrain)
 
-![Noise Waves](/images/terrain.png)
+![Terrain](/images/terrain.png)
 
 **Water: 2288 bytes**
 
