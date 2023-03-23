@@ -3,6 +3,7 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (import "Math" "random" (func $random (result f64)))
   (import "console" "log" (func $log (param i32)))
+  (import "console" "log" (func $log_2 (param i32) (param i32)))
   (import "console" "log" (func $log_float (param f64)))
   (import "error" "throw" (func $throw (param i32)))
 
@@ -25,7 +26,7 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; if result matches this value, then perform nop
   (global $nop_flag i32 (i32.const -1))
-  (global $bytes_per_px i32 (i32.const 4))
+  (global $bytes_per_px (export "bytes_per_pixel") i32 (i32.const 4))
 
   ;; RENDERING CONSTANTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -45,6 +46,8 @@
     )
   )
 
+  ;; coords should range from 0 to < canvas_length for x
+  ;; and 0 to < canvas_height for y
   (func $canvas_coords_to_canvas_mem_index (param $x i32) (param $y i32) (result i32)
     ;; check if vertex is out of bounds
     (if (i32.or
@@ -166,7 +169,7 @@
     (local.set $end_i (global.get $canvas_width))
     (local.set $end_j (global.get $canvas_height))
 
-    ;; outer loop
+    ;; outer loop - x coords
     (local.set $i (local.get $start_i))
     (loop $outer_loop
       (if (i32.lt_s (local.get $i) (local.get $end_i))
@@ -174,7 +177,7 @@
 
 
           (block $inner_block 
-            ;; inner loop
+            ;; inner loop - y coords
             (local.set $j (local.get $start_j))
             (loop $inner_loop
               (if (i32.lt_s (local.get $j) (local.get $end_j))

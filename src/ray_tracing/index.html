@@ -19,8 +19,8 @@
     }
 
     canvas {
-      width: 100%;
-      height: 100%;
+      width: calc(100% + 1rem);
+      height: calc(100% + 1rem);
       object-fit: contain;
       touch-action: none;
       /* for debugging */
@@ -86,35 +86,15 @@
 
         wasm.init(window.innerWidth, window.innerHeight);
 
-        if (wasm.canvas_width.value && wasm.canvas_height.value) {
-          // get reference to canvas image data in wasm's linear memory
-          const canvasData = new Uint8Array(
-            wasm.memory.buffer,
-            0,
-            wasm.canvas_width.value * wasm.canvas_height.value
-          );
-
-          // transform wasm linear memory to image data
-          const imageData = ctx.createImageData(
-            wasm.canvas_width.value,
-            wasm.canvas_height.value
-          );
-          imageData.data.set(canvasData);
-
-          // load image data onto canvas
-          ctx.putImageData(imageData, 0, 0);
-        }
-
-        // animate
-        (async function animate() {
-          wasm.update();
-
+        const render = () => {
           if (wasm.canvas_width.value && wasm.canvas_height.value) {
             // get reference to canvas image data in wasm's linear memory
             const canvasData = new Uint8Array(
               wasm.memory.buffer,
               0,
-              wasm.canvas_width.value * wasm.canvas_height.value
+              wasm.canvas_width.value *
+                wasm.canvas_height.value *
+                wasm.bytes_per_pixel.value
             );
 
             // transform wasm linear memory to image data
@@ -127,7 +107,12 @@
             // load image data onto canvas
             ctx.putImageData(imageData, 0, 0);
           }
+        };
 
+        // animate
+        (async function animate() {
+          wasm.update();
+          render();
           requestAnimationFrame(animate);
         })();
       })
