@@ -81,7 +81,7 @@
       })
       .then(({ instance: { exports: wasm } }) => {
         window.addEventListener("resize", (e) => {
-          wasm.viewport(window.innerWidth, window.innerHeight);
+          wasm.sync_viewport(window.innerWidth, window.innerHeight);
         });
 
         wasm.init(window.innerWidth, window.innerHeight);

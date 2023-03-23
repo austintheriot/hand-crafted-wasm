@@ -94,8 +94,8 @@
   (global $w_y (mut f64) (f64.const 0.0))
   (global $w_z (mut f64) (f64.const 0.0))
 
-  (global $viewport_height (mut f64) (f64.const 0.0))
-  (global $viewport_width (mut f64) (f64.const 0.0))
+  (global $sync_viewport_height (mut f64) (f64.const 0.0))
+  (global $sync_viewport_width (mut f64) (f64.const 0.0))
 
   (global $horizontal_x (mut f64) (f64.const 0.0))
   (global $horizontal_y (mut f64) (f64.const 0.0))
@@ -230,6 +230,15 @@
 
   ;; runs through entire camera pipeline to update all values
   (func $update_camera_values
+    (local $u_cross_result_x f64)
+    (local $u_cross_result_y f64)
+    (local $u_cross_result_z f64)
+
+    (local $v_cross_result_x f64)
+    (local $v_cross_result_y f64)
+    (local $v_cross_result_z f64)
+
+
     ;; update aspect_ratio
     (global.set $aspect_ratio
       (f64.div 
@@ -334,13 +343,266 @@
       )
     )
 
+    ;; prepare cross product for calculating u
+    (local.set $u_cross_result_x
+      (call $vec_cross
+        (global.get $vup_x)
+        (global.get $vup_y)
+        (global.get $vup_z)
+        (global.get $w_x)
+        (global.get $w_y)
+        (global.get $w_z)
+        (i32.const 0)
+      )
+    )
+    (local.set $u_cross_result_y
+      (call $vec_cross
+        (global.get $vup_x)
+        (global.get $vup_y)
+        (global.get $vup_z)
+        (global.get $w_x)
+        (global.get $w_y)
+        (global.get $w_z)
+        (i32.const 1)
+      )
+    )
+    (local.set $u_cross_result_z
+      (call $vec_cross
+        (global.get $vup_x)
+        (global.get $vup_y)
+        (global.get $vup_z)
+        (global.get $w_x)
+        (global.get $w_y)
+        (global.get $w_z)
+        (i32.const 2)
+      )
+    )
+
     ;; update u
+    (global.set $u_x
+      (call $vec_normalize
+        (local.get $u_cross_result_x)
+        (local.get $u_cross_result_y)
+        (local.get $u_cross_result_z)
+        (i32.const 0)
+      )
+    )
+    (global.set $u_y
+      (call $vec_normalize
+        (local.get $u_cross_result_x)
+        (local.get $u_cross_result_y)
+        (local.get $u_cross_result_z)
+        (i32.const 1)
+      )
+    )
+    (global.set $u_z
+      (call $vec_normalize
+        (local.get $u_cross_result_x)
+        (local.get $u_cross_result_y)
+        (local.get $u_cross_result_z)
+        (i32.const 2)
+      )
+    )
+
+    ;; prepare cross product for calculating v
+    (local.set $v_cross_result_x
+      (call $vec_cross
+        (global.get $w_x)
+        (global.get $w_y)
+        (global.get $w_z)
+        (global.get $u_x)
+        (global.get $u_y)
+        (global.get $u_z)
+        (i32.const 0)
+      )
+    )
+    (local.set $v_cross_result_y
+      (call $vec_cross
+        (global.get $w_x)
+        (global.get $w_y)
+        (global.get $w_z)
+        (global.get $u_x)
+        (global.get $u_y)
+        (global.get $u_z)
+        (i32.const 1)
+      )
+    )
+    (local.set $v_cross_result_z
+      (call $vec_cross
+        (global.get $w_x)
+        (global.get $w_y)
+        (global.get $w_z)
+        (global.get $u_x)
+        (global.get $u_y)
+        (global.get $u_z)
+        (i32.const 2)
+      )
+    )
+
     ;; update v
-    ;; update viewport_height
-    ;; update viewport_width
+    (global.set $v_x
+      (call $vec_normalize
+        (local.get $v_cross_result_x)
+        (local.get $v_cross_result_y)
+        (local.get $v_cross_result_z)
+        (i32.const 0)
+      )
+    )
+    (global.set $v_y
+      (call $vec_normalize
+        (local.get $v_cross_result_x)
+        (local.get $v_cross_result_y)
+        (local.get $v_cross_result_z)
+        (i32.const 1)
+      )
+    )
+    (global.set $v_z
+      (call $vec_normalize
+        (local.get $v_cross_result_x)
+        (local.get $v_cross_result_y)
+        (local.get $v_cross_result_z)
+        (i32.const 2)
+      )
+    )
+
+    ;; update sync_viewport_height
+    (global.set $sync_viewport_height
+      (f64.mul 
+        (f64.const 2.0)
+        (global.get $camera_h)
+      )
+    )
+
+    ;; update sync_viewport_width
+    (global.set $sync_viewport_width
+      (f64.mul
+        (global.get $sync_viewport_height)
+        (global.get $aspect_ratio)
+      )
+    )
+
     ;; update horizontal
+    (global.set $horizontal_x
+      (f64.mul
+        (f64.mul
+          (global.get $u_x)
+          (global.get $sync_viewport_width)
+        )
+        (global.get $focus_distance)
+      )
+    )
+    (global.set $horizontal_y
+      (f64.mul
+        (f64.mul
+          (global.get $u_y)
+          (global.get $sync_viewport_width)
+        )
+        (global.get $focus_distance)
+      )
+    )
+    (global.set $horizontal_z
+      (f64.mul
+        (f64.mul
+          (global.get $u_z)
+          (global.get $sync_viewport_width)
+        )
+        (global.get $focus_distance)
+      )
+    )
+
     ;; update vertical
+    (global.set $vertical_x
+      (f64.mul
+        (f64.mul
+          (global.get $v_x)
+          (global.get $sync_viewport_height)
+        )
+        (global.get $focus_distance)
+      )
+    )
+    (global.set $vertical_y
+      (f64.mul
+        (f64.mul
+          (global.get $v_y)
+          (global.get $sync_viewport_height)
+        )
+        (global.get $focus_distance)
+      )
+    )
+    (global.set $vertical_z
+      (f64.mul
+        (f64.mul
+          (global.get $v_z)
+          (global.get $sync_viewport_height)
+        )
+        (global.get $focus_distance)
+      )
+    )
+
     ;; update lower_left_corner
+    (global.set $lower_left_corner_x
+      (f64.sub
+        (f64.sub
+          (f64.sub
+            (global.get $camera_origin_x)
+            (f64.div
+              (global.get $horizontal_x)
+              (f64.const 2.0)  
+            )
+          )
+          (f64.div
+            (global.get $vertical_x)
+            (f64.const 2.0)  
+          )
+        )
+        (f64.mul
+          (global.get $focus_distance)
+          (global.get $w_x)
+        )
+      )
+    )
+    (global.set $lower_left_corner_y
+      (f64.sub
+        (f64.sub
+          (f64.sub
+            (global.get $camera_origin_y)
+            (f64.div
+              (global.get $horizontal_y)
+              (f64.const 2.0)  
+            )
+          )
+          (f64.div
+            (global.get $vertical_y)
+            (f64.const 2.0)  
+          )
+        )
+        (f64.mul
+          (global.get $focus_distance)
+          (global.get $w_y)
+        )
+      )
+    )
+    (global.set $lower_left_corner_z
+      (f64.sub
+        (f64.sub
+          (f64.sub
+            (global.get $camera_origin_z)
+            (f64.div
+              (global.get $horizontal_z)
+              (f64.const 2.0)  
+            )
+          )
+          (f64.div
+            (global.get $vertical_z)
+            (f64.const 2.0)  
+          )
+        )
+        (f64.mul
+          (global.get $focus_distance)
+          (global.get $w_z)
+        )
+      )
+    )
   )
   
   ;; get min between two i32 values
@@ -553,7 +815,7 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   
   ;; save the windows actual size in pixels in wasm memory
-  (func $viewport (export "viewport") 
+  (func $sync_viewport (export "sync_viewport") 
     (param $prev_window_width i32) 
     (param $prev_window_height i32)
 
@@ -623,9 +885,10 @@
     (param $initial_canvas_height i32)
 
     ;; synchronize window && canvas size with internal state
-    (call $viewport 
+    (call $sync_viewport 
       (local.get $initial_canvas_width) 
       (local.get $initial_canvas_height)
     )
+    (call $update_camera_values)
   )
 )
