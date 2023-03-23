@@ -3,8 +3,9 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "npm run clean:dist && mkdir dist && npm run copy:src && mkdir dist/images && npm run copy:images && npm run build:readme",
+    "build": "npm run clean:dist && mkdir dist && npm run build:html && npm run build-wasm",
     "deploy": "npm run build && gh-pages -d dist",
+    "build:html": "npm run copy:src && mkdir dist/images && npm run copy:images && npm run build:readme",
     "build:readme": "marked -i README.md -o dist/index.html --gfm",
     "copy:src": "cp -r src/* dist",
     "copy:images": "cp -r images/* dist/images",
