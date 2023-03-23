@@ -2,6 +2,10 @@
   ;; IMPORTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (import "Math" "random" (func $random (result f64)))
+  (import "Math" "tan" (func $tan (param f64) (result f64)))
+  (import "Math" "cos" (func $cos (param f64) (result f64)))
+  (import "Math" "sin" (func $sin (param f64) (result f64)))
+  (global $PI (import "Math" "PI") f64)
   (import "console" "log" (func $log (param i32)))
   (import "console" "log" (func $log_2 (param i32) (param i32)))
   (import "console" "log" (func $log_float (param f64)))
@@ -16,16 +20,25 @@
 
   ;; CANVAS CONSTANTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  ;; width in pixels--this also doubles as the camera_width
   (global $canvas_width (export "canvas_width") (mut i32) (i32.const 0))
+
+  ;; height in pixels--this also doubles as the camera_height
   (global $canvas_height (export "canvas_height") (mut i32) (i32.const 0))
+
   ;; largest possible size the canvas can be in any one direction in pixels
   (global $max_dimension i32 (i32.const 100))
+
   ;; 100w * 100h * 4 bytes per pixel = 0-40,000
+  ;; @todo -- calculate ending position dynamically to allow manipulating dimensions dynamically
 
   ;; GENERAL CONSTANTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
   ;; if result matches this value, then perform nop
   (global $nop_flag i32 (i32.const -1))
+
   (global $bytes_per_px (export "bytes_per_pixel") i32 (i32.const 4))
 
   ;; RENDERING CONSTANTS
@@ -33,9 +46,174 @@
   ;; (global $width f64 (f64.const 0))
   ;; (global $height f64 (f64.const 0))
   ;; (global $now f64 (f64.const 0))
+  
+  ;; should match width of canvas in pixels
+  (global $aperature (mut f64) (f64.const 0.0))
+
+  (global $focus_distance (mut f64) (f64.const 0.75))
+
+  (global $lens_radius (mut f64) (f64.const 0.0))
+
+  ;; PI / 3.0 -- stored in radians
+  (global $camera_field_of_view (mut f64) (f64.const 1.0471975511965976))
+
+  (global $camera_h (mut f64) (f64.const 0.0))
+
+  (global $focal_length (mut f64) (f64.const 1.0))
+
+  (global $pitch (mut f64) (f64.const 0.0))
+
+  ;; look down the z-axis by default
+  (global $yaw (mut f64) (f64.const -90.0))
+
+  (global $vup_x (mut f64) (f64.const 0.0))
+  (global $vup_y (mut f64) (f64.const 1.0))
+  (global $vup_z (mut f64) (f64.const 0.0))
+
+  ;; PI / 3.0 - stored in radians
+  (global $camera_origin_x (mut f64) (f64.const 0.0))
+  (global $camera_origin_y (mut f64) (f64.const 0.0))
+  (global $camera_origin_z (mut f64) (f64.const 1.0))
+
+  (global $aspect_ratio (mut f64) (f64.const 0.0))
+
+  (global $camera_front_x (mut f64) (f64.const 0.0))
+  (global $camera_front_y (mut f64) (f64.const 0.0))
+  (global $camera_front_z (mut f64) (f64.const 0.0))
+
+  (global $u_x (mut f64) (f64.const 0.0))
+  (global $u_y (mut f64) (f64.const 0.0))
+  (global $u_z (mut f64) (f64.const 0.0))
+
+  (global $v_x (mut f64) (f64.const 0.0))
+  (global $v_y (mut f64) (f64.const 0.0))
+  (global $v_z (mut f64) (f64.const 0.0))
+  
+  (global $w_x (mut f64) (f64.const 0.0))
+  (global $w_y (mut f64) (f64.const 0.0))
+  (global $w_z (mut f64) (f64.const 0.0))
+
+  (global $viewport_height (mut f64) (f64.const 0.0))
+  (global $viewport_width (mut f64) (f64.const 0.0))
+
+  (global $horizontal_x (mut f64) (f64.const 0.0))
+  (global $horizontal_y (mut f64) (f64.const 0.0))
+  (global $horizontal_z (mut f64) (f64.const 0.0))
+
+  (global $vertical_x (mut f64) (f64.const 0.0))
+  (global $vertical_y (mut f64) (f64.const 0.0))
+  (global $vertical_z (mut f64) (f64.const 0.0))
+
+  (global $lower_left_corner_x (mut f64) (f64.const 0.0))
+  (global $lower_left_corner_y (mut f64) (f64.const 0.0))
+  (global $lower_left_corner_z (mut f64) (f64.const 0.0))
+
+  (global $look_at_x (mut f64) (f64.const 1))
+  (global $look_at_y (mut f64) (f64.const 1))
+  (global $look_at_z (mut f64) (f64.const 1))
 
   ;; INTERNAL FUNCTIONS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (func $degrees_to_radians (param $degrees f64) (result f64)
+    (f64.div
+      (f64.mul
+        (local.get $degrees)
+        (global.get $PI)
+      )
+      (f64.const 180.0)
+    )
+  )
+
+  ;; (func $add_vec 
+  ;;   (param $x1 f64)
+  ;;   (param $y1 f64)
+  ;;   (param $z1 f64)
+  ;;   (param $x2 f64)
+  ;;   (param $y2 f64)
+  ;;   (param $z2 f64)
+  ;;   (result f64 f64 f64)
+
+  ;;   (i32.add
+  ;;     (local.get $x1)
+  ;;     (local.get $x2)
+  ;;   )
+  ;;   (i32.add
+  ;;     (local.get $y1)
+  ;;     (local.get $y2)
+  ;;   )
+  ;;   (i32.add
+  ;;     (local.get $z1)
+  ;;     (local.get $z2)
+  ;;   )
+  ;; )
+
+  ;; runs through entire camera pipeline to update all values
+  (func $update_camera_values
+    ;; update aspect_ratio
+    (global.set $aspect_ratio
+      (f64.div 
+        (global.get $canvas_width)
+        (global.get $canvas_height)
+      )
+    )
+    
+    ;; update camera_h
+    (global.set $camera_h
+      (call $tan 
+        (f64.div
+          (global.get $camera_field_of_view)
+          (f64.const 2.0)
+        )
+      )
+    )
+
+    ;; update camera_front
+    (global.set $camera_front_x
+      (f64.mul
+        (call $cos
+          (call $degrees_to_radians
+            (global.get $yaw)
+          )
+        )
+        (call $cos
+            (call $degrees_to_radians
+            (global.get $pitch)
+          )
+        )
+      )
+    )
+    (global.set $camera_front_y
+      (call $sin
+        (call $degrees_to_radians
+          (global.get $pitch)
+        )
+      )
+    )
+    (global.set $camera_front_z
+      (f64.mul
+        (call $sin
+          (call $degrees_to_radians
+            (global.get $yaw)
+          )
+        )
+        (call $cos
+            (call $degrees_to_radians
+            (global.get $pitch)
+          )
+        )
+      )
+    )
+    ;; update look_at
+    ;; update w
+    ;; update u
+    ;; update v
+    ;; update viewport_height
+    ;; update viewport_width
+    ;; update horizontal
+    ;; update vertical
+    ;; update lower_left_corner
+  )
   
   ;; get min between two i32 values
   (func $i32_min (param i32 i32) (result i32)

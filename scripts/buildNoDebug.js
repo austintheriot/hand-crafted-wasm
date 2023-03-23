@@ -1,1 +1,2 @@
-require('../utils/scriptUtils').buildNoDebug();
+import { buildNoDebug } from '../utils/scriptUtils.js';
+buildNoDebug()

@@ -1,6 +1,7 @@
 {
   "name": "hand-crafted-wasm",
   "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "npm run clean:dist && mkdir dist && npm run build:html && npm run build-wasm",

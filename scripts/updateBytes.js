@@ -1,1 +1,2 @@
-require('../utils/scriptUtils').updateBytes();
+import { updateBytes } from '../utils/scriptUtils.js';
+updateBytes()

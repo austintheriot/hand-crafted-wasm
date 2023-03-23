@@ -1,2 +1,4 @@
-require('../utils/scriptUtils').clean();
+import { clean } from '../utils/scriptUtils.js';
+
+clean()
 

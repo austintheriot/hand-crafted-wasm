@@ -1,2 +1,2 @@
-require('../utils/scriptUtils').optimize();
-
+import { optimize } from '../utils/scriptUtils.js';
+optimize()

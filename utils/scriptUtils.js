@@ -1,7 +1,8 @@
-const path = require('path');
-const _wabt = require('wabt');
-const { promises: asyncFs, ...fs } = require('fs');
-const binaryen = require('binaryen');
+import path from 'path';
+import _wabt from 'wabt';
+import { promises as asyncFs} from 'fs';
+import * as fs from 'fs';
+import binaryen from 'binaryen';
 
 const DEFAULT_ROOT_DIR = 'src';
 
@@ -136,11 +137,16 @@ const updateBytes = async () => {
   }
 }
 
-module.exports = {
-  clean: async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, cleanCb),
-  buildDebug: async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, buildCb, { debug: true }),
-  buildNoDebug: async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, buildCb, { debug: false }),
-  optimize: async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, optimizeCb),
+const clean = async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, cleanCb);
+const buildDebug = async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, buildCb, { debug: true })
+const buildNoDebug = async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, buildCb, { debug: false });
+const optimize = async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, optimizeCb);
+
+export {
+  clean,
+  buildDebug,
+  buildNoDebug,
+  optimize,
   updateBytes,
   DEFAULT_ROOT_DIR,
-};
+}

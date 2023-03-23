@@ -1,1 +1,2 @@
-require('../utils/scriptUtils').buildDebug();
+import { buildDebug } from '../utils/scriptUtils.js';
+buildDebug()
