@@ -5,6 +5,7 @@
   (import "Math" "tan" (func $tan (param f64) (result f64)))
   (import "Math" "cos" (func $cos (param f64) (result f64)))
   (import "Math" "sin" (func $sin (param f64) (result f64)))
+  (import "Math" "pow" (func $pow (param f64) (param f64) (result f64)))
   (global $PI (import "Math" "PI") f64)
   (import "console" "log" (func $log (param i32)))
   (import "console" "log" (func $log_2 (param i32) (param i32)))
@@ -125,28 +126,107 @@
     )
   )
 
-  ;; (func $add_vec 
-  ;;   (param $x1 f64)
-  ;;   (param $y1 f64)
-  ;;   (param $z1 f64)
-  ;;   (param $x2 f64)
-  ;;   (param $y2 f64)
-  ;;   (param $z2 f64)
-  ;;   (result f64 f64 f64)
+  (func $vec_len_squared (param $x f64) (param $y f64) (param $z f64) (result f64)
+    (f64.add
+      (f64.add
+        (call $pow 
+          (local.get $x)
+          (f64.const 2.0)
+        )
+        (call $pow 
+          (local.get $y)
+          (f64.const 2.0)
+        )
+      )
+      (call $pow 
+        (local.get $z)
+        (f64.const 2.0)
+      )
+    )
+  )
 
-  ;;   (i32.add
-  ;;     (local.get $x1)
-  ;;     (local.get $x2)
-  ;;   )
-  ;;   (i32.add
-  ;;     (local.get $y1)
-  ;;     (local.get $y2)
-  ;;   )
-  ;;   (i32.add
-  ;;     (local.get $z1)
-  ;;     (local.get $z2)
-  ;;   )
-  ;; )
+  (func $vec_len (param $x f64) (param $y f64) (param $z f64) (result f64)
+    (f64.sqrt
+      (call $vec_len_squared (local.get $x) (local.get $y) (local.get $z))
+    )
+  )
+
+  ;; $component refers to which item in the vec to get the value back from
+  ;; (since binaryen currently is failing to allow multivalue return)
+  (func $vec_normalize (param $x f64) (param $y f64) (param $z f64) (param $component i32)
+    (local $length f64)
+
+    (local.set $length
+      (call $vec_len (local.get $x) (local.get $y) (local.get $z))
+    )
+
+    (if (i32.eq (local.get $component) (i32.const 0))
+      (then return (f64.div (local.get $x) (local.get $length)))
+    )
+    (if (i32.eq (local.get $component) (i32.const 1))
+      (then return (f64.div (local.get $y) (local.get $length)))
+    )
+    (if (i32.eq (local.get $component) (i32.const 2))
+      (then return (f64.div (local.get $z) (local.get $length)))
+    )
+    unreachable
+  )
+
+  ;; $component refers to which item in the vec to get the value back from
+  ;; (since binaryen currently is failing to allow multivalue return)
+  (func $vec_cross 
+    (param $x1 f64) 
+    (param $y1 f64)
+    (param $z1 f64)
+    (param $x2 f64) 
+    (param $y2 f64)
+    (param $z2 f64)
+    (param $component i32)
+
+    (if (i32.eq (local.get $component) (i32.const 0))
+      (then return 
+        (f64.sub
+          (f64.mul
+            (local.get $y1)
+            (local.get $z2)
+          ) 
+          (f64.mul
+            (local.get $z1)
+            (local.get $y2)
+          )
+        )
+      )
+    )
+    (if (i32.eq (local.get $component) (i32.const 1))
+      (then return 
+        (f64.sub
+          (f64.mul
+            (local.get $z1)
+            (local.get $x2)
+          ) 
+          (f64.mul
+            (local.get $x1)
+            (local.get $z2)
+          )
+        )
+      )
+    )
+    (if (i32.eq (local.get $component) (i32.const 2))
+      (then return
+        (f64.sub
+          (f64.mul
+            (local.get $x1)
+            (local.get $y2)
+          ) 
+          (f64.mul
+            (local.get $y1)
+            (local.get $x2)
+          )
+        )
+      )
+    )
+    unreachable
+  )
 
   ;; runs through entire camera pipeline to update all values
   (func $update_camera_values
@@ -204,8 +284,56 @@
         )
       )
     )
+
     ;; update look_at
+    (global.set $look_at_x
+      (f64.add
+        (global.get $camera_origin_x)
+        (global.get $camera_front_x)
+      )
+    )
+    (global.set $look_at_y
+      (f64.add
+        (global.get $camera_origin_y)
+        (global.get $camera_front_y)
+      )
+    )
+    (global.set $look_at_z
+      (f64.add
+        (global.get $camera_origin_z)
+        (global.get $camera_front_z)
+      )
+    )
+
     ;; update w
+    (global.set $w_x
+      (call $vec_normalize
+        (f64.sub
+          (global.get $camera_origin_x)
+          (global.get $look_at_x)
+        )
+        (i32.const 0)
+      )
+    )
+    (global.set $w_y
+      (call $vec_normalize
+        (f64.sub
+          (global.get $camera_origin_y)
+          (global.get $look_at_y)
+        )
+        (i32.const 1)
+      )
+    )
+    (global.set $w_z
+      (call $vec_normalize
+        (f64.sub
+          (global.get $camera_origin_z)
+          (global.get $look_at_z)
+        )
+        (i32.const 2)
+      )
+    )
+
     ;; update u
     ;; update v
     ;; update viewport_height

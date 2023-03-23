@@ -94,6 +94,8 @@ const optimizeCb = async (directoryPath, fileName, fn, options = {}) => {
 
     const buffer = await asyncFs.readFile(fullFilePath);
     const module = binaryen.readBinary(buffer);
+    // doesn't seem to do anything
+    module.setFeatures(module.getFeatures() | binaryen.Features.Multivalue);
     module.optimize();
     await asyncFs.writeFile(newPath, module.emitBinary());
   } else if (await isFolder(fullFilePath)) {
