@@ -3,21 +3,26 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc && vite build",
-    "serve": "vite preview --host 0.0.0.0",
-    "clean-wasm": "node ./scripts/clean.js",
+    "build": "npm run clean:dist && mkdir dist && npm run copy:src && mkdir dist/images && npm run copy:images && npm run build:readme",
+    "deploy": "npm run build && gh-pages -d dist",
+    "build:readme": "marked -i README.md -o dist/index.html --gfm",
+    "copy:src": "cp -r src/* dist",
+    "copy:images": "cp -r images/* dist/images",
+    "clean:dist": "rimraf dist",
+    "clean:wasm": "node ./scripts/clean.js",
     "build-wasm:debug": "node ./scripts/buildDebug.js",
     "build-wasm:no-debug": "node ./scripts/buildNoDebug.js",
     "optimize-wasm": "node ./scripts/optimize.js",
     "update-wasm-bytes": "node ./scripts/updateBytes.js",
-    "build-wasm": "npm run clean-wasm && npm run build-wasm:debug && npm run build-wasm:no-debug && npm run optimize-wasm && npm run update-wasm-bytes",
+    "build-wasm": "npm run clean:wasm && npm run build-wasm:debug && npm run build-wasm:no-debug && npm run optimize-wasm && npm run update-wasm-bytes",
     "test-wasm": "npm run build-wasm && jest --watch"
   },
   "devDependencies": {
     "binaryen": "^102.0.0",
+    "gh-pages": "^5.0.0",
     "jest": "^27.3.1",
+    "marked": "^4.3.0",
     "typescript": "^4.3.2",
-    "vite": "^2.6.4",
     "wabt": "^1.0.24"
   }
 }

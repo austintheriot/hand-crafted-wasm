@@ -11,9 +11,9 @@ It's amazing how minute adjustments to `A`, `B`, `C`, and `D` (sometimes differi
 
 Below you can find a live, editable demo as well as a gallery of interesting combinations I've found. If you come up with your own interesting pattern, I'd love to see it!
 
-[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/parametric_equations/)
+[See live demo](/parametric_equations/)
 
-[See full gallery](https://austintheriot.github.io/hand-crafted-wasm/src/parametric_equations/gallery.html)
+[See full gallery](/parametric_equations/gallery.html)
 
 ![Parametric Equations](/images/parametric_equations.png)
 
@@ -21,7 +21,7 @@ Below you can find a live, editable demo as well as a gallery of interesting com
 
 A rasterized perlin noise field rendered in WebAssembly. Uses a custom all-WebAssembly port of processing/p5.js' perlin noise implementation.
 
-[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/noise_field/)
+[See live demo](/noise_field/)
 
 ![Perlin Noise](/images/perlin_noise.png)
 
@@ -29,7 +29,7 @@ A rasterized perlin noise field rendered in WebAssembly. Uses a custom all-WebAs
 
 3D particle simulation of the Lorenz strange attractor using 30,000 particles. Use arrow keys or drag/touch the window to change the camera position. All physics/3d projection code was written from scratch in WebAssembly and was inspired by ssloy's tinyrenderer: https://github.com/ssloy/tinyrenderer
 
-[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/lorenz_system/)
+[See live demo](/lorenz_system/)
 
 ![Lorenz System](/images/lorenz_system.png)
 
@@ -37,7 +37,7 @@ A rasterized perlin noise field rendered in WebAssembly. Uses a custom all-WebAs
 
 An implementation of the classic Conway's Game Of Life, hand written in WebAssembly.
 
-[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/life/)
+[See live demo](/life/)
 
 ![Conway's Game of Life](/images/conways_game_of_life.png)
 
@@ -45,7 +45,7 @@ An implementation of the classic Conway's Game Of Life, hand written in WebAssem
 
 An ever-contracting and expanding flower shape. Uses a custom all-WebAssembly port of processing/p5.js' perlin noise implementation.
 
-[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/chaos_circle/)
+[See live demo](/chaos_circle/)
 
 ![Chaos Circle](/images/chaos_circle.png)
 
@@ -53,7 +53,7 @@ An ever-contracting and expanding flower shape. Uses a custom all-WebAssembly po
 
 3D particle waves. Use arrow keys or drag/touch the window to change the camera position. 
 
-[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/noise_cloud)
+[See live demo](/noise_cloud)
 
 ![Noise Cloud](/images/noise_cloud.png)
 
@@ -63,19 +63,19 @@ An ever-contracting and expanding flower shape. Uses a custom all-WebAssembly po
 
 **Terrain: 2241 bytes**
 
-[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/terrain)
+[See live demo](/terrain)
 
 ![Terrain](/images/terrain.png)
 
 **Water: 2288 bytes**
 
-[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/water)
+[See live demo](/water)
 
 ![Water](/images/water.png)
 
 **Water (Low-fi/ASCII version): 2775 bytes**
 
-[See live demo](https://austintheriot.github.io/hand-crafted-wasm/src/water_ascii)
+[See live demo](/water_ascii)
 
 ![Water ASCII](/images/water_ascii.png)
 
