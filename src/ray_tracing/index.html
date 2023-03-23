@@ -51,6 +51,10 @@
       canvas.height = height;
     };
 
+    const throwError = (errorCode) => {
+      console.error("Error occurred during execution:", { errorCode });
+    };
+
     Promise.all([
       fetch("../perlin_noise/perlin_noise_optimized.wasm"),
       fetch("./ray_tracing_optimized.wasm"),
@@ -72,6 +76,7 @@
           Math,
           console,
           canvas: { updateCanvasDimensions },
+          error: { throw: throwError },
         });
       })
       .then(({ instance: { exports: wasm } }) => {
