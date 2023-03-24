@@ -49,69 +49,69 @@
   ;; (global $now f64 (f64.const 0))
   
   ;; should match width of canvas in pixels
-  (global $aperature (mut f64) (f64.const 0.0))
+  (global $aperature (export "aperture") (mut f64) (f64.const 0.0))
 
-  (global $focus_distance (mut f64) (f64.const 0.75))
+  (global $focus_distance (export "focus_distance") (mut f64) (f64.const 0.75))
 
-  (global $lens_radius (mut f64) (f64.const 0.0))
+  (global $lens_radius (export "lens_radius") (mut f64) (f64.const 0.0))
 
   ;; PI / 3.0 -- stored in radians
-  (global $camera_field_of_view (mut f64) (f64.const 1.0471975511965976))
+  (global $camera_field_of_view (export "camera_field_of_view") (mut f64) (f64.const 1.0471975511965976))
 
-  (global $camera_h (mut f64) (f64.const 0.0))
+  (global $camera_h (export "camera_h") (mut f64) (f64.const 0.0))
 
-  (global $focal_length (mut f64) (f64.const 1.0))
+  (global $focal_length (export "focal_length") (mut f64) (f64.const 1.0))
 
-  (global $pitch (mut f64) (f64.const 0.0))
+  (global $pitch (export "pitch") (mut f64) (f64.const 0.0))
 
   ;; look down the z-axis by default
-  (global $yaw (mut f64) (f64.const -90.0))
+  (global $yaw (export "yaw") (mut f64) (f64.const -90.0))
 
-  (global $vup_x (mut f64) (f64.const 0.0))
-  (global $vup_y (mut f64) (f64.const 1.0))
-  (global $vup_z (mut f64) (f64.const 0.0))
+  (global $vup_x (export "vup_x") (mut f64) (f64.const 0.0))
+  (global $vup_y (export "vup_y") (mut f64) (f64.const 1.0))
+  (global $vup_z (export "vup_z") (mut f64) (f64.const 0.0))
 
   ;; PI / 3.0 - stored in radians
-  (global $camera_origin_x (mut f64) (f64.const 0.0))
-  (global $camera_origin_y (mut f64) (f64.const 0.0))
-  (global $camera_origin_z (mut f64) (f64.const 1.0))
+  (global $camera_origin_x (export "camera_origin_x") (mut f64) (f64.const 0.0))
+  (global $camera_origin_y (export "camera_origin_y") (mut f64) (f64.const 0.0))
+  (global $camera_origin_z (export "camera_origin_z") (mut f64) (f64.const 1.0))
 
-  (global $aspect_ratio (mut f64) (f64.const 0.0))
+  (global $aspect_ratio (export "aspect_ratio") (mut f64) (f64.const 0.0))
 
-  (global $camera_front_x (mut f64) (f64.const 0.0))
-  (global $camera_front_y (mut f64) (f64.const 0.0))
-  (global $camera_front_z (mut f64) (f64.const 0.0))
+  (global $camera_front_x (export "camera_front_x") (mut f64) (f64.const 0.0))
+  (global $camera_front_y (export "camera_front_y") (mut f64) (f64.const 0.0))
+  (global $camera_front_z (export "camera_front_z") (mut f64) (f64.const 0.0))
 
-  (global $u_x (mut f64) (f64.const 0.0))
-  (global $u_y (mut f64) (f64.const 0.0))
-  (global $u_z (mut f64) (f64.const 0.0))
+  (global $u_x (export "u_x") (mut f64) (f64.const 0.0))
+  (global $u_y (export "u_y") (mut f64) (f64.const 0.0))
+  (global $u_z (export "u_z") (mut f64) (f64.const 0.0))
 
-  (global $v_x (mut f64) (f64.const 0.0))
-  (global $v_y (mut f64) (f64.const 0.0))
-  (global $v_z (mut f64) (f64.const 0.0))
+  (global $v_x (export "v_x") (mut f64) (f64.const 0.0))
+  (global $v_y (export "v_y") (mut f64) (f64.const 0.0))
+  (global $v_z (export "v_z") (mut f64) (f64.const 0.0))
   
-  (global $w_x (mut f64) (f64.const 0.0))
-  (global $w_y (mut f64) (f64.const 0.0))
-  (global $w_z (mut f64) (f64.const 0.0))
+  (global $w_x (export "w_x") (mut f64) (f64.const 0.0))
+  (global $w_y (export "w_y") (mut f64) (f64.const 0.0))
+  (global $w_z (export "w_z") (mut f64) (f64.const 0.0))
 
-  (global $sync_viewport_height (mut f64) (f64.const 0.0))
-  (global $sync_viewport_width (mut f64) (f64.const 0.0))
+  (global $sync_viewport_height (export "sync_viewport_height") (mut f64) (f64.const 0.0))
+  (global $sync_viewport_width (export "sync_viewport_width") (mut f64) (f64.const 0.0))
 
-  (global $horizontal_x (mut f64) (f64.const 0.0))
-  (global $horizontal_y (mut f64) (f64.const 0.0))
-  (global $horizontal_z (mut f64) (f64.const 0.0))
+  (global $horizontal_x (export "horizontal_x") (mut f64) (f64.const 0.0))
+  (global $horizontal_y (export "horizontal_y") (mut f64) (f64.const 0.0))
+  (global $horizontal_z (export "horizontal_z") (mut f64) (f64.const 0.0))
 
-  (global $vertical_x (mut f64) (f64.const 0.0))
-  (global $vertical_y (mut f64) (f64.const 0.0))
-  (global $vertical_z (mut f64) (f64.const 0.0))
+  (global $vertical_x (export "vertical_x") (mut f64) (f64.const 0.0))
+  (global $vertical_y (export "vertical_y") (mut f64) (f64.const 0.0))
+  (global $vertical_z (export "vertical_z") (mut f64) (f64.const 0.0))
 
-  (global $lower_left_corner_x (mut f64) (f64.const 0.0))
-  (global $lower_left_corner_y (mut f64) (f64.const 0.0))
-  (global $lower_left_corner_z (mut f64) (f64.const 0.0))
+  (global $lower_left_corner_x (export "lower_left_corner_x") (mut f64) (f64.const 0.0))
+  (global $lower_left_corner_y (export "lower_left_corner_y") (mut f64) (f64.const 0.0))
+  (global $lower_left_corner_z (export "lower_left_corner_z") (mut f64) (f64.const 0.0))
 
-  (global $look_at_x (mut f64) (f64.const 1))
-  (global $look_at_y (mut f64) (f64.const 1))
-  (global $look_at_z (mut f64) (f64.const 1))
+  (global $look_at_x (export "look_at_x") (mut f64) (f64.const 1))
+  (global $look_at_y (export "look_at_y") (mut f64) (f64.const 1))
+  (global $look_at_z (export "look_at_z") (mut f64) (f64.const 1))
 
   ;; INTERNAL FUNCTIONS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -284,8 +284,12 @@
     ;; update aspect_ratio
     (global.set $aspect_ratio
       (f64.div 
-        (global.get $canvas_width)
-        (global.get $canvas_height)
+        (f64.convert_i32_u
+          (global.get $canvas_width)
+        )
+        (f64.convert_i32_u
+          (global.get $canvas_height)
+        )
       )
     )
     
