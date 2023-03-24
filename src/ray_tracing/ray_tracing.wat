@@ -16,6 +16,7 @@
   (global $PI (import "Math" "PI") f64)
   (import "console" "log" (func $log (param i32)))
   (import "console" "log" (func $log_2 (param i32) (param i32)))
+  (import "console" "log" (func $log_4 (param i32) (param i32) (param i32) (param i32)))
   (import "console" "log" (func $log_float (param f64)))
   (import "console" "log" (func $log_float_2 (param f64) (param f64)))
   (import "error" "throw" (func $throw (param i32)))
@@ -750,15 +751,49 @@
   )
   
   ;; s & t should map from 0.0 -> 1.0
-  (func $get_pixel_color (param $s f64) (param $t f64)
-    ;; (call $draw_pixel 
-    ;;   (local.get $i) 
-    ;;   (local.get $j)
-    ;;   (local.get $rgb_color_x) 
-    ;;   (local.get $rgb_color_y)
-    ;;   (local.get $rgb_color_x)
-    ;;   (i32.const 255)
-    ;; )
+  ;; s 0->1 maps from left to right on the canvas
+  ;; t 0->1 maps from bottom to top on the canvas
+  (func $get_pixel_color 
+    (param $s f64) 
+    (param $t f64)
+    (result i32 i32 i32 i32)
+
+    (if (f64.lt (local.get $s) (f64.const 0.5))
+      (then
+          (if (f64.lt (local.get $t) (f64.const 0.5))
+            (then
+              ;; bottom left
+              (i32.const 255) (i32.const 0) (i32.const 0) (i32.const 255)
+              return
+            )
+            (else 
+              ;; top left
+              (i32.const 0) (i32.const 255) (i32.const 0) (i32.const 255)
+              return
+            )
+          )
+      )
+      (else 
+        (if (f64.lt (local.get $t) (f64.const 0.5))
+          (then
+            ;; bottom right
+            (i32.const 0) (i32.const 0) (i32.const 255) (i32.const 255)
+            return
+          )
+          (else 
+            ;; top right
+            (i32.const 255) (i32.const 255) (i32.const 0) (i32.const 255)
+            return
+          )
+        )
+      )
+    )
+
+    ;; todo
+    ;; (i32.const 255)
+    ;; (i32.const 0)
+    ;; (i32.const 0)
+    ;; (i32.const 255)
   )
 
   (func $iterate_pixels 
@@ -808,16 +843,37 @@
                     )
                   )
                    (local.set $t
-                    (f64.div
-                      (f64.convert_i32_u (local.get $j))
-                      (f64.convert_i32_u (global.get $canvas_height))
+                    (f64.sub
+                      ;; flip y axis, since canvas is upside down
+                      ;; compared to normal rendering conventions
+                      (f64.const 1.0)
+                      (f64.div
+                        (f64.convert_i32_u (local.get $j))
+                        (f64.convert_i32_u (global.get $canvas_height))
+                      )
                     )
                   )
 
+                  
+                  (call $draw_pixel 
+                    ;; supplies the pixel coordinates
+                    (local.get $i)
+                    (local.get $j)
+                    ;; supplies the color for that pixel
+                    (call $get_pixel_color
+                      (local.get $s)
+                      (local.get $t)
+                    )
+                  )
+                  
+                  (call $log_2 (local.get $i) (local.get $j))
+                  (call $log_float_2 (local.get $s) (local.get $t))
                   (call $get_pixel_color
                     (local.get $s)
                     (local.get $t)
                   )
+                  (call $log_4)
+                  (call $log (i32.const 11111111))
                   
                   (local.set $j (i32.add (local.get $j) (local.get $step)))
                   ;; return to beginning of loop
@@ -900,7 +956,7 @@
   )
 
   ;; called on each tick to update all internal state
-  (func (export "update")
+  (func (export "render_to_internal_buffer")
     (local $num_pixels i32)
 
     (call $iterate_pixels (i32.const 0) (i32.const 10000) (i32.const 1))

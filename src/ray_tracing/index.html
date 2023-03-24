@@ -25,7 +25,6 @@
       touch-action: none;
       /* for debugging */
       background-color: black;
-      cursor: grab;
 
       /* default is to smooth edges of pixels on canvas */
       image-rendering: pixelated;
@@ -109,12 +108,12 @@
           }
         };
 
-        wasm.update();
+        wasm.render_to_internal_buffer();
         render();
 
         // // animate
         // (async function animate() {
-        //   wasm.update();
+        //   wasm.render_to_internal_buffer();
         //   render();
         //   requestAnimationFrame(animate);
         // })();
