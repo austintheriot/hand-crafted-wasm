@@ -900,6 +900,50 @@
     (local.get $ray_direction_y)
     (local.get $ray_direction_z)
   )
+
+  ;; accepts ray and returns the color that ray should be
+  ;; in rgb of range 0->1
+  (func $ray_color
+    (param $ray_origin_x f64)
+    (param $ray_origin_y f64)
+    (param $ray_origin_z f64)
+    (param $ray_direction_x f64)
+    (param $ray_direction_y f64)
+    (param $ray_direction_z f64)
+    (result f64 f64 f64)
+
+    ;; todo
+    (f64.const 0.5)
+    (f64.const 0.0)
+    (f64.const 0.0)
+  )
+
+  ;; converts f64 color in range 0.0->1.0 into u8 color 0-255
+  (func $color_f64_to_u8
+    (param $r f64)
+    (param $g f64)
+    (param $b f64)
+    (result i32 i32 i32)
+
+    (i32.trunc_sat_f64_u
+      (f64.mul
+        (local.get $r)
+        (f64.const 255)
+      )
+    )
+     (i32.trunc_sat_f64_u
+      (f64.mul
+        (local.get $g)
+        (f64.const 255)
+      )
+    )
+     (i32.trunc_sat_f64_u
+      (f64.mul
+        (local.get $b)
+        (f64.const 255)
+      )
+    )
+  )
   
   ;; s & t should map from 0.0 -> 1.0
   ;; s 0->1 maps from left to right on the canvas
@@ -912,9 +956,14 @@
     (local $ray_origin_x f64)
     (local $ray_origin_y f64)
     (local $ray_origin_z f64)
+
     (local $ray_direction_x f64)
     (local $ray_direction_y f64)
     (local $ray_direction_z f64)
+
+    (local $color_r f64)
+    (local $color_g f64)
+    (local $color_b f64)
     
     ;; wasm-equivalent of desctructuring assignment
     ;; pops multiple values off the stack
@@ -936,19 +985,27 @@
       )
     )
 
-    (call $log_float_6
-      (local.get $ray_origin_x)
-      (local.get $ray_origin_y)
-      (local.get $ray_origin_z)
-      (local.get $ray_direction_x)
-      (local.get $ray_direction_y)
-      (local.get $ray_direction_z)
+    (local.set $color_r
+      (local.set $color_g
+        (local.set $color_b
+          (call $ray_color
+            (local.get $ray_origin_x)
+            (local.get $ray_origin_y)
+            (local.get $ray_origin_z)
+            (local.get $ray_direction_x)
+            (local.get $ray_direction_y)
+            (local.get $ray_direction_z)
+          )
+        )
+      )
     )
     
     ;; todo
-    (i32.const 0)
-    (i32.const 0)
-    (i32.const 10)
+    (call $color_f64_to_u8
+      (local.get $color_r)
+      (local.get $color_g)
+      (local.get $color_b)
+    )
     (i32.const 255)
   )
 
