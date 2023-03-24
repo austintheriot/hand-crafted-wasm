@@ -352,6 +352,58 @@
     )
   )
 
+  ;; linearly interpolates between 2 3d vectors
+  (func $vec_interpolate
+    (param $x1 f64)
+    (param $y1 f64)
+    (param $z1 f64)
+    (param $x2 f64)
+    (param $y2 f64)
+    (param $z2 f64)
+    (param $percent f64)
+    (result f64 f64 f64)
+
+    (local $vector_x f64)
+    (local $vector_y f64)
+    (local $vector_z f64)
+
+    (local $result_x f64)
+    (local $result_y f64)
+    (local $result_z f64)
+
+    (local.set $vector_x
+      (f64.sub (local.get $x2) (local.get $x1))
+    )
+    (local.set $vector_y
+      (f64.sub (local.get $y2) (local.get $y1))
+    )
+    (local.set $vector_z
+      (f64.sub (local.get $z2) (local.get $z1))
+    )
+
+    (f64.add 
+      (local.get $x1)
+      (f64.mul
+        (local.get $vector_x)
+        (local.get $percent)
+      )
+    )
+    (f64.add 
+      (local.get $y1)
+      (f64.mul
+        (local.get $vector_y)
+        (local.get $percent)
+      )
+    )
+    (f64.add 
+      (local.get $z1)
+      (f64.mul
+        (local.get $vector_z)
+        (local.get $percent)
+      )
+    )
+  )
+
   ;; runs through entire camera pipeline to update all values
   (func $update_camera_values
     (local $u_cross_result_x f64)
@@ -930,10 +982,49 @@
     (param $ray_direction_z f64)
     (result f64 f64 f64)
 
-    ;; todo
-    (f64.const 0.0)
-    (f64.const 1.0)
-    (f64.const 0.0)
+    (local $unit_direction_x f64)
+    (local $unit_direction_y f64)
+    (local $unit_direction_z f64)
+
+    (local $t f64)
+
+    (local $gradient_x f64)
+    (local $gradient_y f64)
+    (local $gradient_z f64)
+
+    (local.set $unit_direction_x
+      (local.set $unit_direction_y
+        (local.set $unit_direction_z
+          (call $vec_normalize
+            (local.get $ray_direction_x)
+            (local.get $ray_direction_y)
+            (local.get $ray_direction_z)
+          )
+        )
+      )
+    )
+
+    (local.set $t
+      (f64.mul
+        (f64.const 0.5)
+        (f64.add
+          (local.get $unit_direction_y)
+          (f64.const 1.0)
+        )
+      ) 
+    )
+
+    (call $vec_interpolate
+      (f64.const 1.0)
+      (f64.const 1.0)
+      (f64.const 1.0)
+
+      (f64.const 0.5)
+      (f64.const 0.7)
+      (f64.const 1.0)
+
+      (local.get $t)
+    )
   )
 
   ;; accepts ray and returns the color that ray should be
