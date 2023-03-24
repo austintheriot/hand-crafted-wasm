@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "npm run clean:dist && mkdir dist && npm run build:html && npm run build-wasm",
+    "build": "npm run clean:dist && mkdir dist && npm run build:html",
     "deploy": "npm run build && gh-pages -d dist",
-    "build:html": "npm run copy:src && mkdir dist/images && npm run copy:images && npm run build:readme",
+    "build:html": "npm run update-wasm-bytes && npm run copy:src && mkdir dist/images && npm run copy:images && npm run build:readme",
     "build:readme": "marked -i README.md -o dist/index.html --gfm",
     "copy:src": "cp -r src/* dist",
     "copy:images": "cp -r images/* dist/images",
@@ -14,13 +14,10 @@
     "clean:wasm": "node ./scripts/clean.js",
     "build-wasm:debug": "node ./scripts/buildDebug.js",
     "build-wasm:no-debug": "node ./scripts/buildNoDebug.js",
-    "optimize-wasm": "node ./scripts/optimize.js",
     "update-wasm-bytes": "node ./scripts/updateBytes.js",
-    "build-wasm": "npm run clean:wasm && npm run build-wasm:debug && npm run build-wasm:no-debug && npm run optimize-wasm && npm run update-wasm-bytes",
-    "test-wasm": "npm run build-wasm && jest --watch"
+    "build-wasm": "npm run clean:wasm && npm run build-wasm:debug && npm run build-wasm:no-debug"
   },
   "devDependencies": {
-    "binaryen": "^102.0.0",
     "gh-pages": "^5.0.0",
     "jest": "^27.3.1",
     "marked": "^4.3.0",

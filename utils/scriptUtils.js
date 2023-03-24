@@ -2,7 +2,6 @@ import path from 'path';
 import _wabt from 'wabt';
 import { promises as asyncFs} from 'fs';
 import * as fs from 'fs';
-import binaryen from 'binaryen';
 
 const DEFAULT_ROOT_DIR = 'src';
 
@@ -74,32 +73,12 @@ const buildCb = async (directoryPath, fileName, fn, options = { debug: false }) 
 
 const cleanCb = async (directoryPath, fileName, fn, options = {}) => {
   const fullFilePath = `${directoryPath}/${fileName}`;
-  if (isWasm(fullFilePath)) {
+  // do not delete optimized files, since these are optimized 
+  // and a case-by-case basis through the binaryen CLI
+  if (isWasm(fullFilePath) && !fullFilePath.includes('optimize')) {
     await asyncFs.unlink(fullFilePath);
   } else if (await isFolder(fullFilePath)) {
     await fn(fullFilePath, cleanCb, options);
-  }
-}
-
-const optimizeCb = async (directoryPath, fileName, fn, options = {}) => {
-  const fullFilePath = `${directoryPath}/${fileName}`;
-
-  // convert ordinary .wasm to .wasm file
-  if (isWasm(fullFilePath) && !fullFilePath.includes('debug') && !fullFilePath.includes('optimized')) {
-    // create new file name for the optimize wasm file
-    const array = fullFilePath.split('.wasm');
-    array.push('_optimized')
-    array.push('.wasm');
-    const newPath = array.join('');
-
-    const buffer = await asyncFs.readFile(fullFilePath);
-    const module = binaryen.readBinary(buffer);
-    // doesn't seem to do anything
-    module.setFeatures(module.getFeatures() | binaryen.Features.Multivalue);
-    module.optimize();
-    await asyncFs.writeFile(newPath, module.emitBinary());
-  } else if (await isFolder(fullFilePath)) {
-    await fn(fullFilePath, optimizeCb, options);
   }
 }
 
@@ -142,13 +121,11 @@ const updateBytes = async () => {
 const clean = async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, cleanCb);
 const buildDebug = async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, buildCb, { debug: true })
 const buildNoDebug = async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, buildCb, { debug: false });
-const optimize = async (dir = DEFAULT_ROOT_DIR) => await traverse(dir, optimizeCb);
 
 export {
   clean,
   buildDebug,
   buildNoDebug,
-  optimize,
   updateBytes,
   DEFAULT_ROOT_DIR,
 }

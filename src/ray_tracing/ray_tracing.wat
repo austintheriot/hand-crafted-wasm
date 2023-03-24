@@ -165,38 +165,16 @@
     (param $x f64) 
     (param $y f64)
     (param $z f64) 
-    (param $component i32) 
-    (result f64)
+    (result f64 f64 f64)
     (local $length f64)
-    (local $result f64)
 
     (local.set $length
       (call $vec_len (local.get $x) (local.get $y) (local.get $z))
     )
 
-    (if (i32.eq (local.get $component) (i32.const 0))
-      (then 
-        (local.set $result
-          (f64.div (local.get $x) (local.get $length))
-        )
-      )
-    )
-    (if (i32.eq (local.get $component) (i32.const 1))
-      (then 
-        (local.set $result
-          (f64.div (local.get $y) (local.get $length))
-        )
-      )
-    )
-    (if (i32.eq (local.get $component) (i32.const 2))
-      (then 
-        (local.set $result
-          (f64.div (local.get $z) (local.get $length))
-        )
-      )
-    )
-    
-    (local.get $result) 
+    (f64.div (local.get $x) (local.get $length))
+    (f64.div (local.get $y) (local.get $length))
+    (f64.div (local.get $z) (local.get $length)) 
   )
 
   ;; normalize one component when length is already known
@@ -213,61 +191,38 @@
     (param $x2 f64) 
     (param $y2 f64)
     (param $z2 f64)
-    (param $component i32)
-    (result f64)
+    (result f64 f64 f64)
     
-    (local $result f64)
-
-    (if (i32.eq (local.get $component) (i32.const 0))
-      (then 
-        (local.set $result 
-          (f64.sub
-            (f64.mul
-              (local.get $y1)
-              (local.get $z2)
-            ) 
-            (f64.mul
-              (local.get $z1)
-              (local.get $y2)
-            )
-          )
-        )
+   (f64.sub
+      (f64.mul
+        (local.get $y1)
+        (local.get $z2)
+      ) 
+      (f64.mul
+        (local.get $z1)
+        (local.get $y2)
       )
     )
-    (if (i32.eq (local.get $component) (i32.const 1))
-      (then
-        (local.set $result
-          (f64.sub
-            (f64.mul
-              (local.get $z1)
-              (local.get $x2)
-            ) 
-            (f64.mul
-              (local.get $x1)
-              (local.get $z2)
-            )
-          )
-        ) 
+    (f64.sub
+      (f64.mul
+        (local.get $z1)
+        (local.get $x2)
+      ) 
+      (f64.mul
+        (local.get $x1)
+        (local.get $z2)
       )
     )
-    (if (i32.eq (local.get $component) (i32.const 2))
-      (then
-        (local.set $result
-          (f64.sub
-            (f64.mul
-              (local.get $x1)
-              (local.get $y2)
-            ) 
-            (f64.mul
-              (local.get $y1)
-              (local.get $x2)
-            )
-          )
-        )
+    (f64.sub
+      (f64.mul
+        (local.get $x1)
+        (local.get $y2)
+      ) 
+      (f64.mul
+        (local.get $y1)
+        (local.get $x2)
       )
     )
-  
-    (local.get $result)
   )
 
   ;; runs through entire camera pipeline to update all values
@@ -287,6 +242,8 @@
     (local $U_result_x f64)
     (local $U_result_y f64)
     (local $U_result_z f64)
+
+    (local $example f64)
 
 
     ;; update aspect_ratio
@@ -395,23 +352,23 @@
         (local.get $w_result_x)
         (local.get $w_result_y)
         (local.get $w_result_z)
-        (i32.const 0)
       )
+      (drop)
+      (drop)
     )
     (global.set $w_y
       (call $vec_normalize
         (local.get $w_result_x)
         (local.get $w_result_y)
         (local.get $w_result_z)
-        (i32.const 1)
       )
+      (drop)
     )
     (global.set $w_z
       (call $vec_normalize
         (local.get $w_result_x)
         (local.get $w_result_y)
         (local.get $w_result_z)
-        (i32.const 2)
       )
     )
 
@@ -424,8 +381,9 @@
         (global.get $w_x)
         (global.get $w_y)
         (global.get $w_z)
-        (i32.const 0)
       )
+      (drop)
+      (drop)
     )
     (local.set $u_cross_result_y
       (call $vec_cross
@@ -435,8 +393,8 @@
         (global.get $w_x)
         (global.get $w_y)
         (global.get $w_z)
-        (i32.const 1)
       )
+      (drop)
     )
     (local.set $u_cross_result_z
       (call $vec_cross
@@ -446,7 +404,6 @@
         (global.get $w_x)
         (global.get $w_y)
         (global.get $w_z)
-        (i32.const 2)
       )
     )
 
@@ -456,23 +413,23 @@
         (local.get $u_cross_result_x)
         (local.get $u_cross_result_y)
         (local.get $u_cross_result_z)
-        (i32.const 0)
       )
+      (drop)
+      (drop)
     )
     (global.set $u_y
       (call $vec_normalize
         (local.get $u_cross_result_x)
         (local.get $u_cross_result_y)
         (local.get $u_cross_result_z)
-        (i32.const 1)
       )
+      (drop)
     )
     (global.set $u_z
       (call $vec_normalize
         (local.get $u_cross_result_x)
         (local.get $u_cross_result_y)
         (local.get $u_cross_result_z)
-        (i32.const 2)
       )
     )
 
@@ -485,8 +442,9 @@
         (global.get $u_x)
         (global.get $u_y)
         (global.get $u_z)
-        (i32.const 0)
       )
+      (drop)
+      (drop)
     )
     (local.set $v_cross_result_y
       (call $vec_cross
@@ -496,8 +454,8 @@
         (global.get $u_x)
         (global.get $u_y)
         (global.get $u_z)
-        (i32.const 1)
       )
+      (drop)
     )
     (local.set $v_cross_result_z
       (call $vec_cross
@@ -507,7 +465,6 @@
         (global.get $u_x)
         (global.get $u_y)
         (global.get $u_z)
-        (i32.const 2)
       )
     )
 
@@ -517,23 +474,23 @@
         (local.get $v_cross_result_x)
         (local.get $v_cross_result_y)
         (local.get $v_cross_result_z)
-        (i32.const 0)
       )
+      (drop)
+      (drop)
     )
     (global.set $v_y
       (call $vec_normalize
         (local.get $v_cross_result_x)
         (local.get $v_cross_result_y)
         (local.get $v_cross_result_z)
-        (i32.const 1)
       )
+      (drop)
     )
     (global.set $v_z
       (call $vec_normalize
         (local.get $v_cross_result_x)
         (local.get $v_cross_result_y)
         (local.get $v_cross_result_z)
-        (i32.const 2)
       )
     )
 
@@ -786,10 +743,14 @@
       )
     )
   )
+
+  (func $get_ray_from_camera (result f64 f64 f64)
+    ;; todo 
+    (f64.const 1) (f64.const 1) (f64.const 1)
+  )
   
   ;; s & t should map from 0.0 -> 1.0
   (func $get_pixel_color (param $s f64) (param $t f64)
-    (call $log_float_2 (local.get $s) (local.get $t))
     ;; (call $draw_pixel 
     ;;   (local.get $i) 
     ;;   (local.get $j)
