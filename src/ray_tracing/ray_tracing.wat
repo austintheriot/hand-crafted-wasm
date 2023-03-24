@@ -985,6 +985,7 @@
       )
     )
 
+    ;; get color that each ray returns
     (local.set $color_r
       (local.set $color_g
         (local.set $color_b
@@ -999,8 +1000,21 @@
         )
       )
     )
+
+    ;; todo - scale color by number of samples
+
+    ;; gamma correction
+    (local.set $color_r 
+      (call $sqrt (local.get $color_r))
+    )
+    (local.set $color_g 
+      (call $sqrt (local.get $color_g))
+    )
+    (local.set $color_b 
+      (call $sqrt (local.get $color_b))
+    )
     
-    ;; todo
+    ;; convert 0->1 color to 0->255
     (call $color_f64_to_u8
       (local.get $color_r)
       (local.get $color_g)
