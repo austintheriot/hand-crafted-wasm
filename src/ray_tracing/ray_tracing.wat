@@ -1,4 +1,11 @@
 (module
+  ;; TODOS
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; - get rid of unneccessary exporrts (all the camera globals)
+  ;; - get rid of unused imports (console logs, etc.)
+
+
+
   ;; IMPORTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (import "Math" "random" (func $random (result f64)))
@@ -10,6 +17,7 @@
   (import "console" "log" (func $log (param i32)))
   (import "console" "log" (func $log_2 (param i32) (param i32)))
   (import "console" "log" (func $log_float (param f64)))
+  (import "console" "log" (func $log_float_2 (param f64) (param f64)))
   (import "error" "throw" (func $throw (param i32)))
 
   ;; update actual canvas dimensions based on inner aspect-ratio calculations
@@ -778,8 +786,21 @@
       )
     )
   )
+  
+  ;; s & t should map from 0.0 -> 1.0
+  (func $get_pixel_color (param $s f64) (param $t f64)
+    (call $log_float_2 (local.get $s) (local.get $t))
+    ;; (call $draw_pixel 
+    ;;   (local.get $i) 
+    ;;   (local.get $j)
+    ;;   (local.get $rgb_color_x) 
+    ;;   (local.get $rgb_color_y)
+    ;;   (local.get $rgb_color_x)
+    ;;   (i32.const 255)
+    ;; )
+  )
 
-  (func $draw_gradient 
+  (func $iterate_pixels 
     (local $start_i i32) 
     (local $end_i i32) 
 
@@ -796,6 +817,9 @@
 
     (local $rgb_color_x i32)
     (local $rgb_color_y i32)
+
+    (local $s f64)
+    (local $t f64)
 
     (local.set $step (i32.const 1))
     (local.set $end_i (global.get $canvas_width))
@@ -814,47 +838,25 @@
             (loop $inner_loop
               (if (i32.lt_s (local.get $j) (local.get $end_j))
                 (then
-                  
-                  
-                  ;; perform some work
-                  (local.set $progress_x
-                    (f64.div 
+
+                  ;; convert pixel numbers to coordinates 0->1
+                  (local.set $s
+                    (f64.div
                       (f64.convert_i32_u (local.get $i))
-                      (f64.convert_i32_u (local.get $end_i))
+                      (f64.convert_i32_u (global.get $canvas_width))
                     )
                   )
-                  (local.set $progress_y
-                    (f64.div 
+                   (local.set $t
+                    (f64.div
                       (f64.convert_i32_u (local.get $j))
-                      (f64.convert_i32_u (local.get $end_j))
-                    )
-                  )
-                  (local.set $rgb_color_x
-                    (i32.trunc_f64_u
-                      (f64.mul
-                        (local.get $progress_x)
-                        (f64.const 255)
-                      )
-                    )
-                  )
-                  (local.set $rgb_color_y
-                    (i32.trunc_f64_u
-                      (f64.mul
-                        (local.get $progress_y)
-                        (f64.const 255)
-                      )
+                      (f64.convert_i32_u (global.get $canvas_height))
                     )
                   )
 
-                  (call $draw_pixel 
-                    (local.get $i) 
-                    (local.get $j)
-                    (local.get $rgb_color_x) 
-                    (local.get $rgb_color_y)
-                    (local.get $rgb_color_x)
-                    (i32.const 255)
+                  (call $get_pixel_color
+                    (local.get $s)
+                    (local.get $t)
                   )
-
                   
                   (local.set $j (i32.add (local.get $j) (local.get $step)))
                   ;; return to beginning of loop
@@ -940,7 +942,7 @@
   (func (export "update")
     (local $num_pixels i32)
 
-    (call $draw_gradient (i32.const 0) (i32.const 10000) (i32.const 1))
+    (call $iterate_pixels (i32.const 0) (i32.const 10000) (i32.const 1))
   )
   
   (func $init 

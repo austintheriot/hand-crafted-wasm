@@ -109,12 +109,15 @@
           }
         };
 
-        // animate
-        (async function animate() {
-          wasm.update();
-          render();
-          requestAnimationFrame(animate);
-        })();
+        wasm.update();
+        render();
+
+        // // animate
+        // (async function animate() {
+        //   wasm.update();
+        //   render();
+        //   requestAnimationFrame(animate);
+        // })();
       })
       .catch((e) => console.error(e));
   </script>
