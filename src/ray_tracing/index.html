@@ -108,12 +108,12 @@
           }
         };
 
-        wasm.render_to_internal_buffer();
+        wasm.tick();
         render();
 
         // // animate
         // (async function animate() {
-        //   wasm.render_to_internal_buffer();
+        //   wasm.tick();
         //   render();
         //   requestAnimationFrame(animate);
         // })();

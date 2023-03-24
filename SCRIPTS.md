@@ -21,12 +21,18 @@ Build all wasm binaries and then optimize specific binary:
 
 ```sh
 # debugging is easier when optimizing from the debug version of the binary
-npm run build-wasm:debug && npm run build-wasm:no-debug && wasm-opt src/ray_tracing/ray_tracing_debug.wasm -all -O2 -o src/ray_tracing/ray_tracing_optimized.wasm
+npm run build-wasm:debug && wasm-opt src/ray_tracing/ray_tracing_debug.wasm -all -O2 -o src/ray_tracing/ray_tracing_optimized.wasm
 ```
 
 Build all wasm binaries, optimize specific binary, and copy into dist for viewing:
 
 ```sh
 # debugging is easier when optimizing from the debug version of the binary
-npm run build-wasm:debug && npm run build-wasm:no-debug && wasm-opt src/ray_tracing/ray_tracing_debug.wasm -all -O2 -o src/ray_tracing/ray_tracing_optimized.wasm && npm run build
+npm run build-wasm:debug && wasm-opt src/ray_tracing/ray_tracing_debug.wasm -all -O2 -o src/ray_tracing/ray_tracing_optimized.wasm && npm run build
+```
+
+Assembling .wat to debug .wasm via binaryen:
+
+```sh
+wasm-as src/ray_tracing/ray_tracing.wat -o src/ray_tracing/ray_tracing.wasm --debuginfo -all --debug
 ```

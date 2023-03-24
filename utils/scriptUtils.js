@@ -23,10 +23,15 @@ const convertToWasm = async (inputWat, outputWasm, debug = false) => {
       sat_float_to_int: true,
       simd: true,
       bulk_memory: true,
+      mutable_globals: true,
+      gc: true,
+      exceptions: true,
+      threads: true,
     });
   const { buffer } = wasmModule.toBinary({
     // helpful for debugging but can double .wasm binary output sizes
     ...(debug && { write_debug_names: true }),
+    log: true,
   });
 
   if (debug) {

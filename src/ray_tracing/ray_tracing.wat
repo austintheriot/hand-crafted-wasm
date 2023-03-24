@@ -3,8 +3,19 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; - get rid of unneccessary exporrts (all the camera globals)
   ;; - get rid of unused imports (console logs, etc.)
+  ;; - remove bounds checks from draw_pixel ?
 
-
+  ;; TYPES
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; - Ray
+  ;;  - origin vector
+  ;;  (x f64)
+  ;;  (y f64)
+  ;;  (z f64)
+  ;;  - direction vector
+  ;;  (x f64)
+  ;;  (y f64)
+  ;;  (z f64)
 
   ;; IMPORTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -19,6 +30,7 @@
   (import "console" "log" (func $log_4 (param i32) (param i32) (param i32) (param i32)))
   (import "console" "log" (func $log_float (param f64)))
   (import "console" "log" (func $log_float_2 (param f64) (param f64)))
+  (import "console" "log" (func $log_float_6 (param f64) (param f64) (param f64) (param f64) (param f64) (param f64)))
   (import "error" "throw" (func $throw (param i32)))
 
   ;; update actual canvas dimensions based on inner aspect-ratio calculations
@@ -223,6 +235,100 @@
         (local.get $y1)
         (local.get $x2)
       )
+    )
+  )
+
+  ;; subtract a vec from a vec
+  (func $vec_sub_vec
+    ;; vec 1
+    (param $x1 f64) (param $y1 f64) (param $z1 f64) 
+    ;; vec 2
+    (param $x2 f64) (param $y2 f64) (param $z2 f64)  
+    ;; resulting vec
+    (result f64 f64 f64)
+    (f64.sub
+      (local.get $x1)
+      (local.get $x2)
+    )
+    (f64.sub
+      (local.get $y1)
+      (local.get $y2)
+    )
+    (f64.sub
+      (local.get $z1)
+      (local.get $z2)
+    )
+  )
+
+  ;; add a vec to a vec
+  (func $vec_add_vec
+    ;; vec 1
+    (param $x1 f64) (param $y1 f64) (param $z1 f64) 
+    ;; vec 2
+    (param $x2 f64) (param $y2 f64) (param $z2 f64)  
+    ;; resulting vec
+    (result f64 f64 f64)
+    (f64.add
+      (local.get $x1)
+      (local.get $x2)
+    )
+    (f64.add
+      (local.get $y1)
+      (local.get $y2)
+    )
+    (f64.add
+      (local.get $z1)
+      (local.get $z2)
+    )
+  )
+
+
+
+  ;; adds a constant to a vector
+  (func $vec_add_constant (param $x f64) (param $y f64) (param $z f64) (param $constant f64) (result f64 f64 f64)
+    (f64.add
+      (local.get $x)
+      (local.get $constant)
+    )
+    (f64.add
+      (local.get $y)
+      (local.get $constant)
+    )
+    (f64.add
+      (local.get $z)
+      (local.get $constant)
+    )
+  )
+
+  ;; multiplies a vector times a constant
+  (func $vec_mul_constant (param $x f64) (param $y f64) (param $z f64) (param $constant f64) (result f64 f64 f64)
+    (f64.mul
+      (local.get $x)
+      (local.get $constant)
+    )
+    (f64.mul
+      (local.get $y)
+      (local.get $constant)
+    )
+    (f64.mul
+      (local.get $z)
+      (local.get $constant)
+    )
+  )
+
+  ;; subtracts a constant from a vector
+  (func $vec_sub_constant (param $x f64) (param $y f64) (param $z f64) (param $constant f64) (result f64 f64 f64)
+    (f64.sub
+      (local.get $x)
+      (local.get $constant)
+    )
+    (f64.sub
+      (local.get $y)
+      (local.get $constant)
+    )
+    (f64.sub
+      (local.get $z)
+      (local.get $constant)
     )
   )
 
@@ -677,14 +783,17 @@
       )
     )
 
-    ;; actually calculate memory index if not out of bounds
-    global.get $canvas_width
-    local.get $y
-    i32.mul
-    local.get $x
-    i32.add
-    global.get $bytes_per_px
-    i32.mul
+    ;; actually calculate memory index if not out of bounds  
+    (i32.mul
+      (i32.add
+        (local.get $x)
+        (i32.mul
+          (global.get $canvas_width)
+          (local.get $y)
+        )
+      )
+      (global.get $bytes_per_px)
+    )
   )
   
   (func $draw_pixel (param $x i32) (param $y i32)
@@ -745,9 +854,51 @@
     )
   )
 
-  (func $get_ray_from_camera (result f64 f64 f64)
-    ;; todo 
-    (f64.const 1) (f64.const 1) (f64.const 1)
+  ;; Returns a Ray -> origin (x, y, z), direction (x, y, z)
+  (func $get_ray_from_camera (param $s f64) (param $t f64) (result f64 f64 f64 f64 f64 f64)
+    (local $ray_direction_x f64)
+    (local $ray_direction_y f64)
+    (local $ray_direction_z f64)
+
+    (local.set $ray_direction_x
+      (local.set $ray_direction_y
+        (local.set $ray_direction_z
+          (call $vec_sub_vec
+            (call $vec_add_vec
+              (call $vec_add_vec
+                (global.get $lower_left_corner_x)
+                (global.get $lower_left_corner_y)
+                (global.get $lower_left_corner_z)
+                (call $vec_mul_constant
+                  (global.get $horizontal_x)
+                  (global.get $horizontal_y)
+                  (global.get $horizontal_z)
+                  (local.get $s)
+                )
+              )
+              (call $vec_mul_constant
+                (global.get $vertical_x)
+                (global.get $vertical_y)
+                (global.get $vertical_z)
+                (local.get $t)
+              )
+            )
+            (global.get $camera_origin_x)
+            (global.get $camera_origin_y)
+            (global.get $camera_origin_z)
+          )
+        )
+      )
+    )
+
+    ;; camera origin 
+    ;; todo - replace this with a randomized amunt in lens circle
+    (global.get $camera_origin_x)
+    (global.get $camera_origin_y)
+    (global.get $camera_origin_z)
+    (local.get $ray_direction_x)
+    (local.get $ray_direction_y)
+    (local.get $ray_direction_z)
   )
   
   ;; s & t should map from 0.0 -> 1.0
@@ -758,45 +909,51 @@
     (param $t f64)
     (result i32 i32 i32 i32)
 
-    (if (f64.lt (local.get $s) (f64.const 0.5))
-      (then
-          (if (f64.lt (local.get $t) (f64.const 0.5))
-            (then
-              ;; bottom left
-              (i32.const 255) (i32.const 0) (i32.const 0) (i32.const 255)
-              return
+    (local $ray_origin_x f64)
+    (local $ray_origin_y f64)
+    (local $ray_origin_z f64)
+    (local $ray_direction_x f64)
+    (local $ray_direction_y f64)
+    (local $ray_direction_z f64)
+    
+    ;; wasm-equivalent of desctructuring assignment
+    ;; pops multiple values off the stack
+    ;; and assigns them to local variables
+    (local.set $ray_origin_x
+      (local.set $ray_origin_y
+        (local.set $ray_origin_z
+          (local.set $ray_direction_x
+            (local.set $ray_direction_y
+              (local.set $ray_direction_z
+                (call $get_ray_from_camera
+                  (local.get $s)
+                  (local.get $t)
+                )
+              )
             )
-            (else 
-              ;; top left
-              (i32.const 0) (i32.const 255) (i32.const 0) (i32.const 255)
-              return
-            )
-          )
-      )
-      (else 
-        (if (f64.lt (local.get $t) (f64.const 0.5))
-          (then
-            ;; bottom right
-            (i32.const 0) (i32.const 0) (i32.const 255) (i32.const 255)
-            return
-          )
-          (else 
-            ;; top right
-            (i32.const 255) (i32.const 255) (i32.const 0) (i32.const 255)
-            return
           )
         )
       )
     )
 
+    (call $log_float_6
+      (local.get $ray_origin_x)
+      (local.get $ray_origin_y)
+      (local.get $ray_origin_z)
+      (local.get $ray_direction_x)
+      (local.get $ray_direction_y)
+      (local.get $ray_direction_z)
+    )
+    
     ;; todo
-    ;; (i32.const 255)
-    ;; (i32.const 0)
-    ;; (i32.const 0)
-    ;; (i32.const 255)
+    (i32.const 0)
+    (i32.const 0)
+    (i32.const 10)
+    (i32.const 255)
   )
 
-  (func $iterate_pixels 
+
+  (func $render_to_internal_buffer
     (local $start_i i32) 
     (local $end_i i32) 
 
@@ -866,28 +1023,29 @@
                     )
                   )
                   
-                  (call $log_2 (local.get $i) (local.get $j))
-                  (call $log_float_2 (local.get $s) (local.get $t))
-                  (call $get_pixel_color
-                    (local.get $s)
-                    (local.get $t)
-                  )
-                  (call $log_4)
-                  (call $log (i32.const 11111111))
+                  ;; debugging colors / pixels
+                  ;; (call $log_2 (local.get $i) (local.get $j))
+                  ;; (call $log_float_2 (local.get $s) (local.get $t))
+                  ;; (call $get_pixel_color
+                  ;;   (local.get $s)
+                  ;;   (local.get $t)
+                  ;; )
+                  ;; (call $log_4)
+                  ;; (call $log (i32.const 11111111))
                   
                   (local.set $j (i32.add (local.get $j) (local.get $step)))
                   ;; return to beginning of loop
-                  br $inner_loop
+                  (br $inner_loop)
                 )
                 ;; exit loop
-                (else br $inner_block)
+                (else (br $inner_block))
               )
             )
           )
 
           
           (local.set $i (i32.add (local.get $i) (local.get $step)))
-          br $outer_loop
+          (br $outer_loop)
         )
         (else return)
       )
@@ -956,14 +1114,11 @@
   )
 
   ;; called on each tick to update all internal state
-  (func (export "render_to_internal_buffer")
-    (local $num_pixels i32)
-
-    (call $iterate_pixels (i32.const 0) (i32.const 10000) (i32.const 1))
+  (func (export "tick")
+    (call $render_to_internal_buffer)
   )
   
-  (func $init 
-    (export "init") 
+  (func (export "init") 
     (param $initial_canvas_width i32) 
     (param $initial_canvas_height i32)
 
