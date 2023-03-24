@@ -153,23 +153,47 @@
 
   ;; $component refers to which item in the vec to get the value back from
   ;; (since binaryen currently is failing to allow multivalue return)
-  (func $vec_normalize (param $x f64) (param $y f64) (param $z f64) (param $component i32)
+  (func $vec_normalize 
+    (param $x f64) 
+    (param $y f64)
+    (param $z f64) 
+    (param $component i32) 
+    (result f64)
     (local $length f64)
+    (local $result f64)
 
     (local.set $length
       (call $vec_len (local.get $x) (local.get $y) (local.get $z))
     )
 
     (if (i32.eq (local.get $component) (i32.const 0))
-      (then return (f64.div (local.get $x) (local.get $length)))
+      (then 
+        (local.set $result
+          (f64.div (local.get $x) (local.get $length))
+        )
+      )
     )
     (if (i32.eq (local.get $component) (i32.const 1))
-      (then return (f64.div (local.get $y) (local.get $length)))
+      (then 
+        (local.set $result
+          (f64.div (local.get $y) (local.get $length))
+        )
+      )
     )
     (if (i32.eq (local.get $component) (i32.const 2))
-      (then return (f64.div (local.get $z) (local.get $length)))
+      (then 
+        (local.set $result
+          (f64.div (local.get $z) (local.get $length))
+        )
+      )
     )
-    unreachable
+    
+    (local.get $result) 
+  )
+
+  ;; normalize one component when length is already known
+  (func $vec_normalize_with_length (param $xyz f64) (param $length f64)
+    (f64.div (local.get $xyz) (local.get $length))
   )
 
   ;; $component refers to which item in the vec to get the value back from
@@ -182,50 +206,60 @@
     (param $y2 f64)
     (param $z2 f64)
     (param $component i32)
+    (result f64)
+    
+    (local $result f64)
 
     (if (i32.eq (local.get $component) (i32.const 0))
-      (then return 
-        (f64.sub
-          (f64.mul
-            (local.get $y1)
-            (local.get $z2)
-          ) 
-          (f64.mul
-            (local.get $z1)
-            (local.get $y2)
+      (then 
+        (local.set $result 
+          (f64.sub
+            (f64.mul
+              (local.get $y1)
+              (local.get $z2)
+            ) 
+            (f64.mul
+              (local.get $z1)
+              (local.get $y2)
+            )
           )
         )
       )
     )
     (if (i32.eq (local.get $component) (i32.const 1))
-      (then return 
-        (f64.sub
-          (f64.mul
-            (local.get $z1)
-            (local.get $x2)
-          ) 
-          (f64.mul
-            (local.get $x1)
-            (local.get $z2)
+      (then
+        (local.set $result
+          (f64.sub
+            (f64.mul
+              (local.get $z1)
+              (local.get $x2)
+            ) 
+            (f64.mul
+              (local.get $x1)
+              (local.get $z2)
+            )
           )
-        )
+        ) 
       )
     )
     (if (i32.eq (local.get $component) (i32.const 2))
-      (then return
-        (f64.sub
-          (f64.mul
-            (local.get $x1)
-            (local.get $y2)
-          ) 
-          (f64.mul
-            (local.get $y1)
-            (local.get $x2)
+      (then
+        (local.set $result
+          (f64.sub
+            (f64.mul
+              (local.get $x1)
+              (local.get $y2)
+            ) 
+            (f64.mul
+              (local.get $y1)
+              (local.get $x2)
+            )
           )
         )
       )
     )
-    unreachable
+  
+    (local.get $result)
   )
 
   ;; runs through entire camera pipeline to update all values
@@ -237,6 +271,14 @@
     (local $v_cross_result_x f64)
     (local $v_cross_result_y f64)
     (local $v_cross_result_z f64)
+
+    (local $w_result_x f64)
+    (local $w_result_y f64)
+    (local $w_result_z f64)
+
+    (local $U_result_x f64)
+    (local $U_result_y f64)
+    (local $U_result_z f64)
 
 
     ;; update aspect_ratio
@@ -314,31 +356,49 @@
       )
     )
 
+    ;; prepare data before calculating w
+    ;; camera_origin - look_at
+    (local.set $w_result_x
+      (f64.sub
+        (global.get $camera_origin_x)
+        (global.get $look_at_x)
+      )
+    )
+    (local.set $w_result_y
+      (f64.sub
+        (global.get $camera_origin_y)
+        (global.get $look_at_y)
+      )
+    )
+    (local.set $w_result_z
+      (f64.sub
+        (global.get $camera_origin_z)
+        (global.get $look_at_z)
+      )
+    )
+
     ;; update w
     (global.set $w_x
       (call $vec_normalize
-        (f64.sub
-          (global.get $camera_origin_x)
-          (global.get $look_at_x)
-        )
+        (local.get $w_result_x)
+        (local.get $w_result_y)
+        (local.get $w_result_z)
         (i32.const 0)
       )
     )
     (global.set $w_y
       (call $vec_normalize
-        (f64.sub
-          (global.get $camera_origin_y)
-          (global.get $look_at_y)
-        )
+        (local.get $w_result_x)
+        (local.get $w_result_y)
+        (local.get $w_result_z)
         (i32.const 1)
       )
     )
     (global.set $w_z
       (call $vec_normalize
-        (f64.sub
-          (global.get $camera_origin_z)
-          (global.get $look_at_z)
-        )
+        (local.get $w_result_x)
+        (local.get $w_result_y)
+        (local.get $w_result_z)
         (i32.const 2)
       )
     )
