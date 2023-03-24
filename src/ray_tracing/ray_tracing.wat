@@ -282,7 +282,27 @@
     )
   )
 
-
+  ;; multiply the elements of a vec by the elements in another vec
+  (func $vec_mul_vec
+    ;; vec 1
+    (param $x1 f64) (param $y1 f64) (param $z1 f64) 
+    ;; vec 2
+    (param $x2 f64) (param $y2 f64) (param $z2 f64)  
+    ;; resulting vec
+    (result f64 f64 f64)
+    (f64.mul
+      (local.get $x1)
+      (local.get $x2)
+    )
+    (f64.mul
+      (local.get $y1)
+      (local.get $y2)
+    )
+    (f64.mul
+      (local.get $z1)
+      (local.get $z2)
+    )
+  )
 
   ;; adds a constant to a vector
   (func $vec_add_constant (param $x f64) (param $y f64) (param $z f64) (param $constant f64) (result f64 f64 f64)
@@ -901,6 +921,21 @@
     (local.get $ray_direction_z)
   )
 
+  (func $background 
+    (param $ray_origin_x f64)
+    (param $ray_origin_y f64)
+    (param $ray_origin_z f64)
+    (param $ray_direction_x f64)
+    (param $ray_direction_y f64)
+    (param $ray_direction_z f64)
+    (result f64 f64 f64)
+
+    ;; todo
+    (f64.const 0.0)
+    (f64.const 1.0)
+    (f64.const 0.0)
+  )
+
   ;; accepts ray and returns the color that ray should be
   ;; in rgb of range 0->1
   (func $ray_color
@@ -912,10 +947,39 @@
     (param $ray_direction_z f64)
     (result f64 f64 f64)
 
-    ;; todo
-    (f64.const 0.5)
-    (f64.const 0.0)
-    (f64.const 0.0)
+    (local $color_r f64)
+    (local $color_g f64)
+    (local $color_b f64)
+
+    ;; each ray starts out at full brightness
+    (local.set $color_r (f64.const 1.0))
+    (local.set $color_g (f64.const 1.0))
+    (local.set $color_b (f64.const 1.0))
+
+    ;; no hit, return sky background gradient
+    (local.set $color_r
+      (local.set $color_g
+        (local.set $color_b
+          (call $vec_mul_vec
+            (local.get $color_r)
+            (local.get $color_g)
+            (local.get $color_b)
+            (call $background
+              (local.get $ray_origin_x)
+              (local.get $ray_origin_y)
+              (local.get $ray_origin_z)
+              (local.get $ray_direction_x)
+              (local.get $ray_direction_y)
+              (local.get $ray_direction_z)
+            )
+          )
+        )
+      )
+    )
+
+    (local.get $color_r)
+    (local.get $color_g)
+    (local.get $color_b)
   )
 
   ;; converts f64 color in range 0.0->1.0 into u8 color 0-255
@@ -1005,13 +1069,13 @@
 
     ;; gamma correction
     (local.set $color_r 
-      (call $sqrt (local.get $color_r))
+      (f64.sqrt (local.get $color_r))
     )
     (local.set $color_g 
-      (call $sqrt (local.get $color_g))
+      (f64.sqrt (local.get $color_g))
     )
     (local.set $color_b 
-      (call $sqrt (local.get $color_b))
+      (f64.sqrt (local.get $color_b))
     )
     
     ;; convert 0->1 color to 0->255
