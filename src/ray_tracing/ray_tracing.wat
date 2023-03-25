@@ -1087,6 +1087,30 @@
     ;; returns HitRecord
     (result i32 f64 f64 f64 f64 f64 f64 f64 i32 i32)
 
+    ;; HitRecord data (out)
+    (local $out_hit_anything i32)
+    (local $out_hit_point_x f64)
+    (local $out_hit_point_y f64)
+    (local $out_hit_point_z f64)
+    (local $out_hit_t f64)
+    (local $out_normal_x f64)
+    (local $out_normal_y f64)
+    (local $out_normal_z f64)
+    (local $out_front_face i32)
+    (local $out_material i32)
+
+    ;; initialize HitRecord data (out) with data coming in
+    (local.set $out_hit_anything (local.get $in_hit_anything ))
+    (local.set $out_hit_point_x (local.get $in_hit_point_x ))
+    (local.set $out_hit_point_y (local.get $in_hit_point_y ))
+    (local.set $out_hit_point_z (local.get $in_hit_point_z ))
+    (local.set $out_hit_t (local.get $in_hit_t ))
+    (local.set $out_normal_x (local.get $in_normal_x ))
+    (local.set $out_normal_y (local.get $in_normal_y ))
+    (local.set $out_normal_z (local.get $in_normal_z ))
+    (local.set $out_front_face (local.get $in_front_face ))
+    (local.set $out_material (local.get $in_material ))
+
     ;; todo
 
     (local.get $in_hit_anything)
