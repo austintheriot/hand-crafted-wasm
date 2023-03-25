@@ -7,32 +7,32 @@
 
   ;; TYPES
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; Ray
-  ;;  # origin vector
+  ;;  Ray
   ;;  ($origin_vector_x f64)
   ;;  ($origin_vector_y f64)
   ;;  ($origin_vector_z f64)
-  ;;  # direction vector
   ;;  ($direction_vector_x f64)
   ;;  ($direction_vector_y f64)
   ;;  ($direction_vector_z f64)
   ;;
-  ;; HitRecord
-  ;;  # hit anything (bool)
+  ;;  HitRecord
   ;;  ($hit_anything i32)
-  ;;  # hit point
   ;;  ($hit_point_x f64)
   ;;  ($hit_point_y f64)
   ;;  ($hit_point_z f64)
-  ;;  # hit t
   ;;  ($hit_t f64)
-  ;;  # normal
   ;;  ($normal_x f64)
   ;;  ($normal_y f64)
   ;;  ($normal_z f64)
-  ;;  # front_face (bool)
   ;;  ($front_face i32)
-  ;;  # todo - material
+  ;;  ($material i32)
+  ;; 
+  ;;  Sphere
+  ;;  ($center_x f64)
+  ;;  ($center_y f64)
+  ;;  ($center_z f64)
+  ;;  ($radius f64)
+  ;;  ($material i32)
 
   ;; IMPORTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1047,6 +1047,49 @@
     )
   )
 
+  (func $hit_sphere
+    ;; Sphere data
+    (param $center_x f64)
+    (param $center_y f64)
+    (param $center_z f64)
+    (param $radius f64)
+    (param $material i32)
+    ;; Ray data
+    (param $ray_origin_x f64)
+    (param $ray_origin_y f64)
+    (param $ray_origin_z f64)
+    (param $ray_direction_x f64)
+    (param $ray_direction_y f64)
+    (param $ray_direction_z f64)
+    ;; HitRecord data (in)
+    (param $in_hit_anything i32)
+    (param $in_hit_point_x f64)
+    (param $in_hit_point_y f64)
+    (param $in_hit_point_z f64)
+    (param $in_hit_t f64)
+    (param $in_normal_x f64)
+    (param $in_normal_y f64)
+    (param $in_normal_z f64)
+    (param $in_front_face i32)
+    (param $in_material i32)
+
+    ;; returns HitRecord
+    (result i32 f64 f64 f64 f64 f64 f64 f64 i32 i32)
+
+    ;; todo
+
+    (local.get $in_hit_anything)
+    (local.get $in_hit_point_x)
+    (local.get $in_hit_point_y)
+    (local.get $in_hit_point_z)
+    (local.get $in_hit_t)
+    (local.get $in_normal_x)
+    (local.get $in_normal_y)
+    (local.get $in_normal_z)
+    (local.get $in_front_face)
+    (local.get $in_material)
+  )
+
   ;; returns HitRecord
   (func $hit_world 
     (param $ray_origin_x f64)
@@ -1055,11 +1098,9 @@
     (param $ray_direction_x f64)
     (param $ray_direction_y f64)
     (param $ray_direction_z f64)
-    (param $min_t f64)
-    (param $max_t f64)
 
     ;; return HitRecord
-    (result i32 f64 f64 f64 f64 f64 f64 f64 i32)
+    (result i32 f64 f64 f64 f64 f64 f64 f64 i32 i32)
 
     ;; HitRecord local data
     (local $hit_anything i32)
@@ -1071,9 +1112,61 @@
     (local $normal_y f64)
     (local $normal_z f64)
     (local $front_face i32)
+    (local $material i32)
 
+    ;; Sphere test data
+    (local $sphere_center_x f64)
+    (local $sphere_center_y f64)
+    (local $sphere_center_z f64)
+    (local $sphere_radius f64)
+    (local $sphere_material i32)
 
-    ;; todo 
+    (local.set $hit_anything
+      (local.set $hit_point_x
+        (local.set $hit_point_y
+          (local.set $hit_point_z
+            (local.set $hit_t
+              (local.set $normal_x
+                (local.set $normal_y
+                  (local.set $normal_z
+                    (local.set $front_face
+                      (local.set $material
+                        (call $hit_sphere
+                          ;; Sphere data
+                          (local.get $sphere_center_x)
+                          (local.get $sphere_center_y)
+                          (local.get $sphere_center_z)
+                          (local.get $sphere_radius)
+                          (local.get $sphere_material)
+                          ;; Ray data
+                          (local.get $ray_origin_x)
+                          (local.get $ray_origin_y)
+                          (local.get $ray_origin_z)
+                          (local.get $ray_direction_x)
+                          (local.get $ray_direction_y)
+                          (local.get $ray_direction_z)
+                          ;; HitRecord data (in)
+                          (local.get $hit_anything)
+                          (local.get $hit_point_x)
+                          (local.get $hit_point_y)
+                          (local.get $hit_point_z)
+                          (local.get $hit_t)
+                          (local.get $normal_x)
+                          (local.get $normal_y)
+                          (local.get $normal_z)
+                          (local.get $front_face)
+                          (local.get $material)
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
 
     ;; return HitRecord data
     (local.get $hit_anything)
@@ -1085,6 +1178,7 @@
     (local.get $normal_y)
     (local.get $normal_z)
     (local.get $front_face)
+    (local.get $material)
   )
 
   ;; accepts ray and returns the color that ray should be
@@ -1102,20 +1196,17 @@
     (local $color_g f64)
     (local $color_b f64)
 
-    ;; HitRecord
+    ;; HitRecord data
     (local $hit_anything i32)
-    ;; hit point
     (local $hit_point_x f64)
     (local $hit_point_y f64)
     (local $hit_point_z f64)
-    ;; hit t
     (local $hit_t f64)
-    ;; normal
     (local $normal_x f64)
     (local $normal_y f64)
     (local $normal_z f64)
-    ;; front_face (bool)
     (local $front_face i32)
+    (local $material i32)
 
     ;; each ray starts out at full brightness
     (local.set $color_r (f64.const 1.0))
@@ -1152,15 +1243,15 @@
                 (local.set $normal_y
                   (local.set $normal_z
                     (local.set $front_face
-                      (call $hit_world
-                        (local.get $ray_origin_x)
-                        (local.get $ray_origin_y)
-                        (local.get $ray_origin_z)
-                        (local.get $ray_direction_x)
-                        (local.get $ray_direction_y)
-                        (local.get $ray_direction_z)
-                        (global.get $min_t)
-                        (global.get $max_t)
+                      (local.set $material
+                        (call $hit_world
+                          (local.get $ray_origin_x)
+                          (local.get $ray_origin_y)
+                          (local.get $ray_origin_z)
+                          (local.get $ray_direction_x)
+                          (local.get $ray_direction_y)
+                          (local.get $ray_direction_z)
+                        )
                       )
                     )
                   )
