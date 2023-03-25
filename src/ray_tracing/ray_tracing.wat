@@ -32,7 +32,12 @@
   ;;  ($center_y f64)
   ;;  ($center_z f64)
   ;;  ($radius f64)
-  ;;  ($material i32)
+  ;;  ($material_type i32)
+  ;;  ($material_albedo_r f64)
+  ;;  ($material_albedo_g f64)
+  ;;  ($material_albedo_b f64)
+  ;;  ($material_fuzz f64)
+  ;;  ($material_refraction_index f64)
 
   ;; IMPORTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1053,7 +1058,13 @@
     (param $center_y f64)
     (param $center_z f64)
     (param $radius f64)
-    (param $material i32)
+    (param $material_type i32)
+    (param $material_albedo_r f64)
+    (param $material_albedo_g f64)
+    (param $material_albedo_b f64)
+    (param $material_fuzz f64)
+    (param $material_refraction_index f64)
+    
     ;; Ray data
     (param $ray_origin_x f64)
     (param $ray_origin_y f64)
@@ -1119,7 +1130,23 @@
     (local $sphere_center_y f64)
     (local $sphere_center_z f64)
     (local $sphere_radius f64)
-    (local $sphere_material i32)
+    (local $sphere_material_type i32)
+    (local $sphere_material_albedo_r f64)
+    (local $sphere_material_albedo_g f64)
+    (local $sphere_material_albedo_b f64)
+    (local $sphere_material_fuzz f64)
+    (local $sphere_material_refraction_index f64)
+
+    (local.set $sphere_center_x (f64.const 0.0))
+    (local.set $sphere_center_y (f64.const 0.0))
+    (local.set $sphere_center_z (f64.const 1.0))
+    (local.set $sphere_radius (f64.const 1.0))
+    (local.set $sphere_material_type (i32.const 0))
+    (local.set $sphere_material_albedo_r (f64.const 0.3))
+    (local.set $sphere_material_albedo_g (f64.const 0.3))
+    (local.set $sphere_material_albedo_b (f64.const 0.4))
+    (local.set $sphere_material_fuzz (f64.const 0.0))
+    (local.set $sphere_material_refraction_index (f64.const 0.0))
 
     (local.set $hit_anything
       (local.set $hit_point_x
@@ -1137,7 +1164,12 @@
                           (local.get $sphere_center_y)
                           (local.get $sphere_center_z)
                           (local.get $sphere_radius)
-                          (local.get $sphere_material)
+                          (local.get $sphere_material_type)
+                          (local.get $sphere_material_albedo_r)
+                          (local.get $sphere_material_albedo_g)
+                          (local.get $sphere_material_albedo_b)
+                          (local.get $sphere_material_fuzz)
+                          (local.get $sphere_material_refraction_index)
                           ;; Ray data
                           (local.get $ray_origin_x)
                           (local.get $ray_origin_y)
