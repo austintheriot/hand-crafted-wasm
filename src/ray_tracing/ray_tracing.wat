@@ -25,7 +25,12 @@
   ;;  ($normal_y f64)
   ;;  ($normal_z f64)
   ;;  ($front_face i32)
-  ;;  ($material i32)
+  ;;  ($material_type i32)
+  ;;  ($material_albedo_r f64)
+  ;;  ($material_albedo_g f64)
+  ;;  ($material_albedo_b f64)
+  ;;  ($material_fuzz f64)
+  ;;  ($material_refraction_index f64)
   ;; 
   ;;  Sphere
   ;;  ($center_x f64)
@@ -1082,10 +1087,15 @@
     (param $in_normal_y f64)
     (param $in_normal_z f64)
     (param $in_front_face i32)
-    (param $in_material i32)
+    (param $in_material_type i32)
+    (param $in_material_albedo_r f64)
+    (param $in_material_albedo_g f64)
+    (param $in_material_albedo_b f64)
+    (param $in_material_fuzz f64)
+    (param $in_material_refraction_index f64)
 
-    ;; returns HitRecord
-    (result i32 f64 f64 f64 f64 f64 f64 f64 i32 i32)
+    ;; return HitRecord
+    (result i32 f64 f64 f64 f64 f64 f64 f64 i32 i32 f64 f64 f64 f64 f64)
 
     ;; HitRecord data (out)
     (local $out_hit_anything i32)
@@ -1097,7 +1107,12 @@
     (local $out_normal_y f64)
     (local $out_normal_z f64)
     (local $out_front_face i32)
-    (local $out_material i32)
+    (local $out_material_type i32)
+    (local $out_material_albedo_r f64)
+    (local $out_material_albedo_g f64)
+    (local $out_material_albedo_b f64)
+    (local $out_material_fuzz f64)
+    (local $out_material_refraction_index f64)
 
     ;; initialize HitRecord data (out) with data coming in
     (local.set $out_hit_anything (local.get $in_hit_anything ))
@@ -1109,20 +1124,29 @@
     (local.set $out_normal_y (local.get $in_normal_y ))
     (local.set $out_normal_z (local.get $in_normal_z ))
     (local.set $out_front_face (local.get $in_front_face ))
-    (local.set $out_material (local.get $in_material ))
+    (local.set $out_material_type (local.get $in_material_type))
+    (local.set $out_material_albedo_r (local.get $in_material_albedo_r))
+    (local.set $out_material_albedo_g (local.get $in_material_albedo_g))
+    (local.set $out_material_albedo_b (local.get $in_material_albedo_b))
+    (local.set $out_material_fuzz (local.get $in_material_fuzz))
+    (local.set $out_material_refraction_index (local.get $in_material_refraction_index))
 
-    ;; todo
-
-    (local.get $in_hit_anything)
-    (local.get $in_hit_point_x)
-    (local.get $in_hit_point_y)
-    (local.get $in_hit_point_z)
-    (local.get $in_hit_t)
-    (local.get $in_normal_x)
-    (local.get $in_normal_y)
-    (local.get $in_normal_z)
-    (local.get $in_front_face)
-    (local.get $in_material)
+    ;; return the HitRecord data
+    (local.get $out_hit_anything)
+    (local.get $out_hit_point_x)
+    (local.get $out_hit_point_y)
+    (local.get $out_hit_point_z)
+    (local.get $out_hit_t)
+    (local.get $out_normal_x)
+    (local.get $out_normal_y)
+    (local.get $out_normal_z)
+    (local.get $out_front_face)
+    (local.get $out_material_type)
+    (local.get $out_material_albedo_r)
+    (local.get $out_material_albedo_g)
+    (local.get $out_material_albedo_b)
+    (local.get $out_material_fuzz)
+    (local.get $out_material_refraction_index)
   )
 
   ;; returns HitRecord
@@ -1135,7 +1159,7 @@
     (param $ray_direction_z f64)
 
     ;; return HitRecord
-    (result i32 f64 f64 f64 f64 f64 f64 f64 i32 i32)
+    (result i32 f64 f64 f64 f64 f64 f64 f64 i32 i32 f64 f64 f64 f64 f64)
 
     ;; HitRecord local data
     (local $hit_anything i32)
@@ -1147,7 +1171,12 @@
     (local $normal_y f64)
     (local $normal_z f64)
     (local $front_face i32)
-    (local $material i32)
+    (local $material_type i32)
+    (local $material_albedo_r f64)
+    (local $material_albedo_g f64)
+    (local $material_albedo_b f64)
+    (local $material_fuzz f64)
+    (local $material_refraction_index f64)
 
     ;; Sphere test data
     (local $sphere_center_x f64)
@@ -1181,37 +1210,52 @@
                 (local.set $normal_y
                   (local.set $normal_z
                     (local.set $front_face
-                      (local.set $material
-                        (call $hit_sphere
-                          ;; Sphere data
-                          (local.get $sphere_center_x)
-                          (local.get $sphere_center_y)
-                          (local.get $sphere_center_z)
-                          (local.get $sphere_radius)
-                          (local.get $sphere_material_type)
-                          (local.get $sphere_material_albedo_r)
-                          (local.get $sphere_material_albedo_g)
-                          (local.get $sphere_material_albedo_b)
-                          (local.get $sphere_material_fuzz)
-                          (local.get $sphere_material_refraction_index)
-                          ;; Ray data
-                          (local.get $ray_origin_x)
-                          (local.get $ray_origin_y)
-                          (local.get $ray_origin_z)
-                          (local.get $ray_direction_x)
-                          (local.get $ray_direction_y)
-                          (local.get $ray_direction_z)
-                          ;; HitRecord data (in)
-                          (local.get $hit_anything)
-                          (local.get $hit_point_x)
-                          (local.get $hit_point_y)
-                          (local.get $hit_point_z)
-                          (local.get $hit_t)
-                          (local.get $normal_x)
-                          (local.get $normal_y)
-                          (local.get $normal_z)
-                          (local.get $front_face)
-                          (local.get $material)
+                      (local.set $material_type
+                        (local.set $material_albedo_r
+                          (local.set $material_albedo_g
+                            (local.set $material_albedo_b
+                              (local.set $material_fuzz
+                                (local.set $material_refraction_index
+                                  (call $hit_sphere
+                                    ;; Sphere data
+                                    (local.get $sphere_center_x)
+                                    (local.get $sphere_center_y)
+                                    (local.get $sphere_center_z)
+                                    (local.get $sphere_radius)
+                                    (local.get $sphere_material_type)
+                                    (local.get $sphere_material_albedo_r)
+                                    (local.get $sphere_material_albedo_g)
+                                    (local.get $sphere_material_albedo_b)
+                                    (local.get $sphere_material_fuzz)
+                                    (local.get $sphere_material_refraction_index)
+                                    ;; Ray data
+                                    (local.get $ray_origin_x)
+                                    (local.get $ray_origin_y)
+                                    (local.get $ray_origin_z)
+                                    (local.get $ray_direction_x)
+                                    (local.get $ray_direction_y)
+                                    (local.get $ray_direction_z)
+                                    ;; HitRecord data (in)
+                                    (local.get $hit_anything)
+                                    (local.get $hit_point_x)
+                                    (local.get $hit_point_y)
+                                    (local.get $hit_point_z)
+                                    (local.get $hit_t)
+                                    (local.get $normal_x)
+                                    (local.get $normal_y)
+                                    (local.get $normal_z)
+                                    (local.get $front_face)
+                                    (local.get $material_type)
+                                    (local.get $material_albedo_r)
+                                    (local.get $material_albedo_g)
+                                    (local.get $material_albedo_b)
+                                    (local.get $material_fuzz)
+                                    (local.get $material_refraction_index)
+                                  )
+                                )
+                              )
+                            )
+                          )
                         )
                       )
                     )
@@ -1234,7 +1278,12 @@
     (local.get $normal_y)
     (local.get $normal_z)
     (local.get $front_face)
-    (local.get $material)
+    (local.get $material_type)
+    (local.get $material_albedo_r)
+    (local.get $material_albedo_g)
+    (local.get $material_albedo_b)
+    (local.get $material_fuzz)
+    (local.get $material_refraction_index)
   )
 
   ;; accepts ray and returns the color that ray should be
@@ -1262,7 +1311,12 @@
     (local $normal_y f64)
     (local $normal_z f64)
     (local $front_face i32)
-    (local $material i32)
+    (local $material_type i32)
+    (local $material_albedo_r f64)
+    (local $material_albedo_g f64)
+    (local $material_albedo_b f64)
+    (local $material_fuzz f64)
+    (local $material_refraction_index f64)
 
     ;; each ray starts out at full brightness
     (local.set $color_r (f64.const 1.0))
@@ -1299,14 +1353,24 @@
                 (local.set $normal_y
                   (local.set $normal_z
                     (local.set $front_face
-                      (local.set $material
-                        (call $hit_world
-                          (local.get $ray_origin_x)
-                          (local.get $ray_origin_y)
-                          (local.get $ray_origin_z)
-                          (local.get $ray_direction_x)
-                          (local.get $ray_direction_y)
-                          (local.get $ray_direction_z)
+                      (local.set $material_type
+                        (local.set $material_albedo_r
+                          (local.set $material_albedo_g
+                            (local.set $material_albedo_b
+                              (local.set $material_fuzz
+                                (local.set $material_refraction_index
+                                  (call $hit_world
+                                    (local.get $ray_origin_x)
+                                    (local.get $ray_origin_y)
+                                    (local.get $ray_origin_z)
+                                    (local.get $ray_direction_x)
+                                    (local.get $ray_direction_y)
+                                    (local.get $ray_direction_z)
+                                  )
+                                )
+                              )
+                            )
+                          )
                         )
                       )
                     )
