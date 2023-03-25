@@ -4,6 +4,7 @@
   ;; - get rid of unneccessary exporrts (all the camera globals)
   ;; - get rid of unused imports (console logs, etc.)
   ;; - remove bounds checks from draw_pixel ?
+  ;; - calculate memory needed for canvas dynamically to allow manipulating dimensions dynamically
 
   ;; TYPES
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -32,7 +33,7 @@
   ;;  ($material_fuzz f64)
   ;;  ($material_refraction_index f64)
   ;; 
-  ;;  Sphere
+  ;;  Sphere - 76 bytes
   ;;  ($center_x f64)
   ;;  ($center_y f64)
   ;;  ($center_z f64)
@@ -66,6 +67,9 @@
   ;; MEMORY
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (memory $memory (export "memory") 2000)
+  ;; Addresses:
+  ;; 0-39,999 for canvas pixel data
+  ;; 40,000-? for object data
 
   ;; CANVAS CONSTANTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -79,8 +83,9 @@
   ;; largest possible size the canvas can be in any one direction in pixels
   (global $max_dimension i32 (i32.const 100))
 
-  ;; 100w * 100h * 4 bytes per pixel = 0-40,000
-  ;; @todo -- calculate ending position dynamically to allow manipulating dimensions dynamically
+  (global $object_ptr i32 (i32.const 40000))
+  (global $object_size i32 (i32.const 76))
+  (global $object_len (mut i32) (i32.const 0))
 
   ;; GENERAL CONSTANTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1491,7 +1496,12 @@
     (local $test_sphere_material_fuzz f64)
     (local $test_sphere_material_refraction_index f64)
     
-    ;; todo - implement $closest_so_far for multiple objects in scene
+    ;; data for looping through world objects
+    (local $closest_so_far f64)
+    (local $start_i i32) 
+    (local $end_i i32) 
+    (local $i i32)
+    (local $step i32)
 
     (local.set $test_sphere_center_x (f64.const 0.0))
     (local.set $test_sphere_center_y (f64.const 0.0))
@@ -1503,6 +1513,36 @@
     (local.set $test_sphere_material_albedo_b (f64.const 0.4))
     (local.set $test_sphere_material_fuzz (f64.const 0.0))
     (local.set $test_sphere_material_refraction_index (f64.const 0.0))
+
+    ;; initialize data for looping
+    (local.set $closest_so_far (global.get $max_t))
+    (local.set $start_i (global.get $object_ptr))
+    (local.set $end_i (i32.add
+      (global.get $object_ptr)
+      (global.get $object_len)
+    ))
+    (local.set $step (global.get $object_size))
+
+    ;; iterate through objects in world
+    (block $outer_loop_block 
+      ;; inner loop - y coords
+      (local.set $i (local.get $start_i))
+      (loop $inner_loop
+        (if (i32.lt_s (local.get $i) (local.get $end_i))
+          (then
+
+            (call $log (i32.const 0))
+            ;; todo - update $hit_sphere to take $max_t variable
+            
+            (local.set $i (i32.add (local.get $i) (local.get $step)))
+            ;; return to beginning of loop
+            (br $inner_loop)
+          )
+          ;; exit loop
+          (else (br $outer_loop_block))
+        )
+      )
+    )
 
     (local.set $hit_anything
       (local.set $hit_point_x
@@ -1931,6 +1971,24 @@
     )
   )
 
+  (func $add_object_to_world
+    (param $sphere_center_x f64)
+    (param $sphere_center_y f64)
+    (param $sphere_center_z f64)
+    (param $sphere_radius f64)
+    (param $sphere_material_type i32)
+    (param $sphere_material_albedo_r f64)
+    (param $sphere_material_albedo_g f64)
+    (param $sphere_material_albedo_b f64)
+    (param $sphere_material_fuzz f64)
+    (param $sphere_material_refraction_index f64)
+
+    (global.set $object_len
+      (global.get $object_len)
+      (global.get $object_size)
+    )
+  )
+
   ;; EXPORTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   
@@ -2002,10 +2060,45 @@
     (param $initial_canvas_width i32) 
     (param $initial_canvas_height i32)
 
+    ;; Sphere test data
+    (local $test_sphere_center_x f64)
+    (local $test_sphere_center_y f64)
+    (local $test_sphere_center_z f64)
+    (local $test_sphere_radius f64)
+    (local $test_sphere_material_type i32)
+    (local $test_sphere_material_albedo_r f64)
+    (local $test_sphere_material_albedo_g f64)
+    (local $test_sphere_material_albedo_b f64)
+    (local $test_sphere_material_fuzz f64)
+    (local $test_sphere_material_refraction_index f64)
+
+    (local.set $test_sphere_center_x (f64.const 0.0))
+    (local.set $test_sphere_center_y (f64.const 0.0))
+    (local.set $test_sphere_center_z (f64.const -1.0))
+    (local.set $test_sphere_radius (f64.const 0.5))
+    (local.set $test_sphere_material_type (i32.const 0))
+    (local.set $test_sphere_material_albedo_r (f64.const 0.3))
+    (local.set $test_sphere_material_albedo_g (f64.const 0.3))
+    (local.set $test_sphere_material_albedo_b (f64.const 0.4))
+    (local.set $test_sphere_material_fuzz (f64.const 0.0))
+    (local.set $test_sphere_material_refraction_index (f64.const 0.0))
+
     ;; synchronize window, canvas size, and camera state
     (call $sync_viewport 
       (local.get $initial_canvas_width) 
       (local.get $initial_canvas_height)
+    )
+    (call $add_object_to_world
+      (local.get $test_sphere_center_x)
+      (local.get $test_sphere_center_y)
+      (local.get $test_sphere_center_z)
+      (local.get $test_sphere_radius)
+      (local.get $test_sphere_material_type)
+      (local.get $test_sphere_material_albedo_r)
+      (local.get $test_sphere_material_albedo_g)
+      (local.get $test_sphere_material_albedo_b)
+      (local.get $test_sphere_material_fuzz)
+      (local.get $test_sphere_material_refraction_index)
     )
   )
 )

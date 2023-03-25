@@ -109,12 +109,15 @@
           wasm.sync_viewport(window.innerWidth, window.innerHeight);
         });
 
-        // animate
-        (async function animate() {
-          wasm.tick();
-          render();
-          requestAnimationFrame(animate);
-        })();
+        wasm.tick();
+        render();
+
+        // // animate
+        // (async function animate() {
+        //   wasm.tick();
+        //   render();
+        //   requestAnimationFrame(animate);
+        // })();
       })
       .catch((e) => console.error(e));
   </script>
