@@ -1698,9 +1698,29 @@
       ;; hit detected: show object
       (else
         (return 
-          (f64.const 0.0)
-          (f64.const 0.0)
-          (f64.const 0.0)
+          ;; display's the circle's normals for now
+          ;; todo - replace with scattering calculations
+          (f64.mul
+            (f64.const 0.5)
+            (f64.add
+              (local.get $normal_x)
+              (f64.const 1.0)
+            )
+          )
+          (f64.mul
+            (f64.const 0.5)
+            (f64.add
+              (local.get $normal_y)
+              (f64.const 1.0)
+            )
+          )
+          (f64.mul
+            (f64.const 0.5)
+            (f64.add
+              (local.get $normal_z)
+              (f64.const 1.0)
+            )
+          )
         )
       )
     )
