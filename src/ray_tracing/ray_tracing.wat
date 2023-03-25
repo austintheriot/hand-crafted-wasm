@@ -7,15 +7,32 @@
 
   ;; TYPES
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; - Ray
-  ;;  - origin vector
-  ;;  (x f64)
-  ;;  (y f64)
-  ;;  (z f64)
-  ;;  - direction vector
-  ;;  (x f64)
-  ;;  (y f64)
-  ;;  (z f64)
+  ;; Ray
+  ;;  # origin vector
+  ;;  ($origin_vector_x f64)
+  ;;  ($origin_vector_y f64)
+  ;;  ($origin_vector_z f64)
+  ;;  # direction vector
+  ;;  ($direction_vector_x f64)
+  ;;  ($direction_vector_y f64)
+  ;;  ($direction_vector_z f64)
+  ;;
+  ;; HitRecord
+  ;;  # hit anything (bool)
+  ;;  ($hit_anything i32)
+  ;;  # hit point
+  ;;  ($hit_point_x f64)
+  ;;  ($hit_point_y f64)
+  ;;  ($hit_point_z f64)
+  ;;  # hit t
+  ;;  ($hit_t f64)
+  ;;  # normal
+  ;;  ($normal_x f64)
+  ;;  ($normal_y f64)
+  ;;  ($normal_z f64)
+  ;;  # front_face (bool)
+  ;;  ($front_face i32)
+  ;;  # todo - material
 
   ;; IMPORTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -133,6 +150,9 @@
   (global $look_at_x (export "look_at_x") (mut f64) (f64.const 1))
   (global $look_at_y (export "look_at_y") (mut f64) (f64.const 1))
   (global $look_at_z (export "look_at_z") (mut f64) (f64.const 1))
+
+  (global $min_t f64 (f64.const 0.001))
+  (global $max_t f64 (f64.const 100000))
 
   ;; INTERNAL FUNCTIONS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1027,6 +1047,46 @@
     )
   )
 
+  ;; returns HitRecord
+  (func $hit_world 
+    (param $ray_origin_x f64)
+    (param $ray_origin_y f64)
+    (param $ray_origin_z f64)
+    (param $ray_direction_x f64)
+    (param $ray_direction_y f64)
+    (param $ray_direction_z f64)
+    (param $min_t f64)
+    (param $max_t f64)
+
+    ;; return HitRecord
+    (result i32 f64 f64 f64 f64 f64 f64 f64 i32)
+
+    ;; HitRecord local data
+    (local $hit_anything i32)
+    (local $hit_point_x f64)
+    (local $hit_point_y f64)
+    (local $hit_point_z f64)
+    (local $hit_t f64)
+    (local $normal_x f64)
+    (local $normal_y f64)
+    (local $normal_z f64)
+    (local $front_face i32)
+
+
+    ;; todo 
+
+    ;; return HitRecord data
+    (local.get $hit_anything)
+    (local.get $hit_point_x)
+    (local.get $hit_point_y)
+    (local.get $hit_point_z)
+    (local.get $hit_t)
+    (local.get $normal_x)
+    (local.get $normal_y)
+    (local.get $normal_z)
+    (local.get $front_face)
+  )
+
   ;; accepts ray and returns the color that ray should be
   ;; in rgb of range 0->1
   (func $ray_color
@@ -1041,6 +1101,21 @@
     (local $color_r f64)
     (local $color_g f64)
     (local $color_b f64)
+
+    ;; HitRecord
+    (local $hit_anything i32)
+    ;; hit point
+    (local $hit_point_x f64)
+    (local $hit_point_y f64)
+    (local $hit_point_z f64)
+    ;; hit t
+    (local $hit_t f64)
+    ;; normal
+    (local $normal_x f64)
+    (local $normal_y f64)
+    (local $normal_z f64)
+    ;; front_face (bool)
+    (local $front_face i32)
 
     ;; each ray starts out at full brightness
     (local.set $color_r (f64.const 1.0))
@@ -1068,6 +1143,35 @@
       )
     )
 
+    (local.set $hit_anything
+      (local.set $hit_point_x
+        (local.set $hit_point_y
+          (local.set $hit_point_z
+            (local.set $hit_t
+              (local.set $normal_x
+                (local.set $normal_y
+                  (local.set $normal_z
+                    (local.set $front_face
+                      (call $hit_world
+                        (local.get $ray_origin_x)
+                        (local.get $ray_origin_y)
+                        (local.get $ray_origin_z)
+                        (local.get $ray_direction_x)
+                        (local.get $ray_direction_y)
+                        (local.get $ray_direction_z)
+                        (global.get $min_t)
+                        (global.get $max_t)
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    
     (local.get $color_r)
     (local.get $color_g)
     (local.get $color_b)
