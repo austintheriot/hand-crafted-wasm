@@ -1990,6 +1990,7 @@
       (local.get $new_canvas_width) 
       (local.get $new_canvas_height)
     )
+    (call $update_camera_values)
   )
 
   ;; called on each tick to update all internal state
@@ -2001,11 +2002,10 @@
     (param $initial_canvas_width i32) 
     (param $initial_canvas_height i32)
 
-    ;; synchronize window && canvas size with internal state
+    ;; synchronize window, canvas size, and camera state
     (call $sync_viewport 
       (local.get $initial_canvas_width) 
       (local.get $initial_canvas_height)
     )
-    (call $update_camera_values)
   )
 )

@@ -80,10 +80,6 @@
         });
       })
       .then(({ instance: { exports: wasm } }) => {
-        window.addEventListener("resize", (e) => {
-          wasm.sync_viewport(window.innerWidth, window.innerHeight);
-        });
-
         wasm.init(window.innerWidth, window.innerHeight);
 
         const render = () => {
@@ -109,15 +105,16 @@
           }
         };
 
-        wasm.tick();
-        render();
+        window.addEventListener("resize", (e) => {
+          wasm.sync_viewport(window.innerWidth, window.innerHeight);
+        });
 
-        // // animate
-        // (async function animate() {
-        //   wasm.tick();
-        //   render();
-        //   requestAnimationFrame(animate);
-        // })();
+        // animate
+        (async function animate() {
+          wasm.tick();
+          render();
+          requestAnimationFrame(animate);
+        })();
       })
       .catch((e) => console.error(e));
   </script>
