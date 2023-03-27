@@ -1144,10 +1144,6 @@
     (param $sphere_material_fuzz f64)
     (param $sphere_material_refraction_index f64)
     
-    ;; used to check which collission was closer when
-    ;; there are multiple objects in a scene
-    (param $min_t_local f64)
-    
     ;; Ray data
     (param $ray_origin_x f64)
     (param $ray_origin_y f64)
@@ -1155,6 +1151,10 @@
     (param $ray_direction_x f64)
     (param $ray_direction_y f64)
     (param $ray_direction_z f64)
+
+    ;; used to check which collission was closer when
+    ;; there are multiple objects in a scene
+    (param $max_t_local f64)
 
     ;; HitRecord data (in)
     (param $in_hit_point_x f64)
@@ -1286,9 +1286,6 @@
       )
     )
 
-    ;; assume a hit and disprove in the following blocks
-    (local.set $hit_object (i32.const 1))
-
     (block $determine_hit
       (if (f64.lt (local.get $disctriminant) (f64.const 0.0))
         (then
@@ -1296,16 +1293,39 @@
           (local.set $hit_object (i32.const 0))
           (br $determine_hit)
         )
-        (else 
-          ;; there was a hit--determine whether it was within an acceptable range
-          (local.set $sqrtd
-            (f64.sqrt
-              (local.get $disctriminant)
+      )
+
+      ;; there was a hit--determine whether it was within an acceptable range
+      (local.set $sqrtd
+        (f64.sqrt
+          (local.get $disctriminant)
+        )
+      )
+      (local.set $root
+        (f64.div
+          (f64.sub
+            (f64.neg 
+              (local.get $half_b)
+            )
+            (local.get $sqrtd)
+          )
+          (local.get $a)
+        )
+      )
+      (if (i32.or
+            (f64.lt
+              (local.get $root)
+              (global.get $min_t)
+            )
+            (f64.lt
+              (local.get $max_t_local)
+              (local.get $root)
             )
           )
+        (then
           (local.set $root
             (f64.div
-              (f64.sub
+              (f64.add
                 (f64.neg 
                   (local.get $half_b)
                 )
@@ -1317,44 +1337,24 @@
           (if (i32.or
                 (f64.lt
                   (local.get $root)
-                  (local.get $min_t_local)
+                  (global.get $min_t)
                 )
                 (f64.lt
-                  (global.get $max_t)
+                  (local.get $max_t_local)
                   (local.get $root)
                 )
               )
             (then
-              (local.set $root
-                (f64.div
-                  (f64.add
-                    (f64.neg 
-                      (local.get $half_b)
-                    )
-                    (local.get $sqrtd)
-                  )
-                  (local.get $a)
-                )
-              )
-              (if (i32.or
-                    (f64.lt
-                      (local.get $root)
-                      (local.get $min_t_local)
-                    )
-                    (f64.lt
-                      (global.get $max_t)
-                      (local.get $root)
-                    )
-                  )
-                (then
-                  ;; there was a hit, but it was out of range
-                  (local.set $hit_object (i32.const 0))
-                  (br $determine_hit)
-                )
-              )
+              ;; there was a hit, but it was out of range
+              (local.set $hit_object (i32.const 0))
+              (br $determine_hit)
             )
           )
         )
+
+        ;; if no other branches were met, then we know we 
+        ;; have a valid hit on this object
+        (local.set $hit_object (i32.const 1))
       )
 
       ;; only bother setting these if there was a legitimate hit
@@ -1489,11 +1489,7 @@
     (local $material_fuzz f64)
     (local $material_refraction_index f64)
 
-    ;; $local_object_hit here refers to when testing 
-    ;; against a single object (not all objects in the scene)
-    (local $local_object_hit i32)
-
-    ;; Sphere data from memory
+    ;; Sphere data that will be loaded from memory
     (local $sphere_center_x f64)
     (local $sphere_center_y f64)
     (local $sphere_center_z f64)
@@ -1512,11 +1508,13 @@
     (local $i i32)
     (local $step i32)
 
+    ;; $local_object_hit here refers to when testing 
+    ;; against a single object (not all objects in the scene)
+    (local $local_object_hit i32)
+
     ;; tested accross all objects 
-    ;; $any_object_hit refers to any hits
-    ;; accross all objects in the scene,
-    ;; compared to $local_object_hit, which refers
-    ;; to a single object being tested
+    ;; $any_object_hit refers to any hits accross all objects in the scene,
+    ;; compared to $local_object_hit, which refers to a single object being tested
     (local $any_object_hit i32)
 
     ;; initialize data for looping
@@ -1524,6 +1522,7 @@
     (local.set $start_i (i32.const 0))
     (local.set $end_i (global.get $object_list_len))
     (local.set $step (i32.const 1))
+    (local.set $local_object_hit (i32.const 0))
     (local.set $any_object_hit (i32.const 0))
 
     ;; iterate through objects in world
@@ -1533,8 +1532,6 @@
       (loop $inner_loop
         (if (i32.lt_s (local.get $i) (local.get $end_i))
           (then
-
-            (call $log (local.get $i))
 
             (block $check_sphere_hit
               ;; load sphere data afrom memory
@@ -1572,8 +1569,6 @@
                 (local.get $sphere_material_albedo_b)
                 (local.get $sphere_material_fuzz)
                 (local.get $sphere_material_refraction_index)
-                ;; used to find the closest collission
-                (local.get $closest_so_far)
                 ;; Ray data
                 (local.get $ray_origin_x)
                 (local.get $ray_origin_y)
@@ -1581,6 +1576,8 @@
                 (local.get $ray_direction_x)
                 (local.get $ray_direction_y)
                 (local.get $ray_direction_z)
+                ;; used to find the closest collission
+                (local.get $closest_so_far)
                 ;; HitRecord data (in)
                 (local.get $hit_point_x)
                 (local.get $hit_point_y)
@@ -1603,7 +1600,7 @@
               (local.set $local_object_hit)
 
               ;; if not hit occurred, do not overwrite previous hit data
-              (if (local.get $local_object_hit)
+              (if (i32.eqz (local.get $local_object_hit))
                 (then
                   (br $check_sphere_hit)
                 )
@@ -1710,27 +1707,6 @@
     (local.set $color_g (f64.const 1.0))
     (local.set $color_b (f64.const 1.0))
 
-    ;; no hit, return sky background gradient
-    (local.set $color_r
-      (local.set $color_g
-        (local.set $color_b
-          (call $vec_mul_vec
-            (local.get $color_r)
-            (local.get $color_g)
-            (local.get $color_b)
-            (call $background
-              (local.get $ray_origin_x)
-              (local.get $ray_origin_y)
-              (local.get $ray_origin_z)
-              (local.get $ray_direction_x)
-              (local.get $ray_direction_y)
-              (local.get $ray_direction_z)
-            )
-          )
-        )
-      )
-    )
-
     (local.set $hit_point_x
       (local.set $hit_point_y
         (local.set $hit_point_z
@@ -1770,9 +1746,30 @@
       )
     )
 
-    (if (i32.eq (local.get $any_object_hit) (i32.const 0))
-      ;; not hit detected: show background
+    (if (i32.eqz (local.get $any_object_hit))
+      ;; no hit detected: show background
       (then 
+        ;; no hit, return sky background gradient
+        (local.set $color_r
+          (local.set $color_g
+            (local.set $color_b
+              (call $vec_mul_vec
+                (local.get $color_r)
+                (local.get $color_g)
+                (local.get $color_b)
+                (call $background
+                  (local.get $ray_origin_x)
+                  (local.get $ray_origin_y)
+                  (local.get $ray_origin_z)
+                  (local.get $ray_direction_x)
+                  (local.get $ray_direction_y)
+                  (local.get $ray_direction_z)
+                )
+              )
+            )
+          )
+        )
+
         (return
           (local.get $color_r)
           (local.get $color_g)
