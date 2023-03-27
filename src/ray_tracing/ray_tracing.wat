@@ -169,6 +169,13 @@
   (global $min_t f64 (f64.const 0.001))
   (global $max_t f64 (f64.const 100000))
 
+  ;; controls
+  (global $look_sensitivity (export "look_sensitivity") (mut f64) (f64.const 3.0))
+  (global $left_stick_x_position (export "left_stick_x_position") (mut f64) (f64.const 0.0))
+  (global $left_stick_y_position (export "left_stick_y_position") (mut f64) (f64.const 0.0))
+  (global $right_stick_x_position (export "right_stick_x_position") (mut f64) (f64.const 0.0))
+  (global $right_stick_y_position (export "right_stick_y_position") (mut f64) (f64.const 0.0))
+
   ;; INTERNAL FUNCTIONS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -480,430 +487,6 @@
       (f64.mul
         (local.get $vector_z)
         (local.get $percent)
-      )
-    )
-  )
-
-  ;; runs through entire camera pipeline to update all values
-  (func $update_camera_values
-    (local $u_cross_result_x f64)
-    (local $u_cross_result_y f64)
-    (local $u_cross_result_z f64)
-
-    (local $v_cross_result_x f64)
-    (local $v_cross_result_y f64)
-    (local $v_cross_result_z f64)
-
-    (local $w_result_x f64)
-    (local $w_result_y f64)
-    (local $w_result_z f64)
-
-    (local $U_result_x f64)
-    (local $U_result_y f64)
-    (local $U_result_z f64)
-
-    (local $example f64)
-
-
-    ;; update aspect_ratio
-    (global.set $aspect_ratio
-      (f64.div 
-        (f64.convert_i32_u
-          (global.get $canvas_width)
-        )
-        (f64.convert_i32_u
-          (global.get $canvas_height)
-        )
-      )
-    )
-    
-    ;; update camera_h
-    (global.set $camera_h
-      (call $tan 
-        (f64.div
-          (global.get $camera_field_of_view)
-          (f64.const 2.0)
-        )
-      )
-    )
-
-    ;; update camera_front
-    (global.set $camera_front_x
-      (f64.mul
-        (call $cos
-          (call $degrees_to_radians
-            (global.get $yaw)
-          )
-        )
-        (call $cos
-            (call $degrees_to_radians
-            (global.get $pitch)
-          )
-        )
-      )
-    )
-    (global.set $camera_front_y
-      (call $sin
-        (call $degrees_to_radians
-          (global.get $pitch)
-        )
-      )
-    )
-    (global.set $camera_front_z
-      (f64.mul
-        (call $sin
-          (call $degrees_to_radians
-            (global.get $yaw)
-          )
-        )
-        (call $cos
-            (call $degrees_to_radians
-            (global.get $pitch)
-          )
-        )
-      )
-    )
-
-    ;; update look_at
-    (global.set $look_at_x
-      (f64.add
-        (global.get $camera_origin_x)
-        (global.get $camera_front_x)
-      )
-    )
-    (global.set $look_at_y
-      (f64.add
-        (global.get $camera_origin_y)
-        (global.get $camera_front_y)
-      )
-    )
-    (global.set $look_at_z
-      (f64.add
-        (global.get $camera_origin_z)
-        (global.get $camera_front_z)
-      )
-    )
-
-    ;; prepare data before calculating w
-    ;; camera_origin - look_at
-    (local.set $w_result_x
-      (f64.sub
-        (global.get $camera_origin_x)
-        (global.get $look_at_x)
-      )
-    )
-    (local.set $w_result_y
-      (f64.sub
-        (global.get $camera_origin_y)
-        (global.get $look_at_y)
-      )
-    )
-    (local.set $w_result_z
-      (f64.sub
-        (global.get $camera_origin_z)
-        (global.get $look_at_z)
-      )
-    )
-
-    ;; update w
-    (global.set $w_x
-      (call $vec_normalize
-        (local.get $w_result_x)
-        (local.get $w_result_y)
-        (local.get $w_result_z)
-      )
-      (drop)
-      (drop)
-    )
-    (global.set $w_y
-      (call $vec_normalize
-        (local.get $w_result_x)
-        (local.get $w_result_y)
-        (local.get $w_result_z)
-      )
-      (drop)
-    )
-    (drop)
-    (global.set $w_z
-      (call $vec_normalize
-        (local.get $w_result_x)
-        (local.get $w_result_y)
-        (local.get $w_result_z)
-      )
-    )
-    (drop)
-    (drop)
-
-    ;; prepare cross product for calculating u
-    (local.set $u_cross_result_x
-      (call $vec_cross
-        (global.get $vup_x)
-        (global.get $vup_y)
-        (global.get $vup_z)
-        (global.get $w_x)
-        (global.get $w_y)
-        (global.get $w_z)
-      )
-      (drop)
-      (drop)
-    )
-    (local.set $u_cross_result_y
-      (call $vec_cross
-        (global.get $vup_x)
-        (global.get $vup_y)
-        (global.get $vup_z)
-        (global.get $w_x)
-        (global.get $w_y)
-        (global.get $w_z)
-      )
-      (drop)
-    )
-    (drop)
-    (local.set $u_cross_result_z
-      (call $vec_cross
-        (global.get $vup_x)
-        (global.get $vup_y)
-        (global.get $vup_z)
-        (global.get $w_x)
-        (global.get $w_y)
-        (global.get $w_z)
-      )
-    )
-    (drop)
-    (drop)
-
-    ;; update u
-    (global.set $u_x
-      (call $vec_normalize
-        (local.get $u_cross_result_x)
-        (local.get $u_cross_result_y)
-        (local.get $u_cross_result_z)
-      )
-      (drop)
-      (drop)
-    )
-    (global.set $u_y
-      (call $vec_normalize
-        (local.get $u_cross_result_x)
-        (local.get $u_cross_result_y)
-        (local.get $u_cross_result_z)
-      )
-      (drop)
-    )
-    (drop)
-    (global.set $u_z
-      (call $vec_normalize
-        (local.get $u_cross_result_x)
-        (local.get $u_cross_result_y)
-        (local.get $u_cross_result_z)
-      )
-    )
-    (drop)
-    (drop)
-
-    ;; prepare cross product for calculating v
-    (local.set $v_cross_result_x
-      (call $vec_cross
-        (global.get $w_x)
-        (global.get $w_y)
-        (global.get $w_z)
-        (global.get $u_x)
-        (global.get $u_y)
-        (global.get $u_z)
-      )
-      (drop)
-      (drop)
-    )
-    (local.set $v_cross_result_y
-      (call $vec_cross
-        (global.get $w_x)
-        (global.get $w_y)
-        (global.get $w_z)
-        (global.get $u_x)
-        (global.get $u_y)
-        (global.get $u_z)
-      )
-      (drop)
-    )
-    (drop)
-    (local.set $v_cross_result_z
-      (call $vec_cross
-        (global.get $w_x)
-        (global.get $w_y)
-        (global.get $w_z)
-        (global.get $u_x)
-        (global.get $u_y)
-        (global.get $u_z)
-      )
-    )
-    (drop)
-    (drop)
-
-    ;; update v
-    (global.set $v_x
-      (call $vec_normalize
-        (local.get $v_cross_result_x)
-        (local.get $v_cross_result_y)
-        (local.get $v_cross_result_z)
-      )
-      (drop)
-      (drop)
-    )
-    (global.set $v_y
-      (call $vec_normalize
-        (local.get $v_cross_result_x)
-        (local.get $v_cross_result_y)
-        (local.get $v_cross_result_z)
-      )
-      (drop)
-    )
-    (drop)
-    (global.set $v_z
-      (call $vec_normalize
-        (local.get $v_cross_result_x)
-        (local.get $v_cross_result_y)
-        (local.get $v_cross_result_z)
-      )
-    )
-    (drop)
-    (drop)
-
-    ;; update sync_viewport_height
-    (global.set $sync_viewport_height
-      (f64.mul 
-        (f64.const 2.0)
-        (global.get $camera_h)
-      )
-    )
-
-    ;; update sync_viewport_width
-    (global.set $sync_viewport_width
-      (f64.mul
-        (global.get $sync_viewport_height)
-        (global.get $aspect_ratio)
-      )
-    )
-
-    ;; update horizontal
-    (global.set $horizontal_x
-      (f64.mul
-        (f64.mul
-          (global.get $u_x)
-          (global.get $sync_viewport_width)
-        )
-        (global.get $focus_distance)
-      )
-    )
-    (global.set $horizontal_y
-      (f64.mul
-        (f64.mul
-          (global.get $u_y)
-          (global.get $sync_viewport_width)
-        )
-        (global.get $focus_distance)
-      )
-    )
-    (global.set $horizontal_z
-      (f64.mul
-        (f64.mul
-          (global.get $u_z)
-          (global.get $sync_viewport_width)
-        )
-        (global.get $focus_distance)
-      )
-    )
-
-    ;; update vertical
-    (global.set $vertical_x
-      (f64.mul
-        (f64.mul
-          (global.get $v_x)
-          (global.get $sync_viewport_height)
-        )
-        (global.get $focus_distance)
-      )
-    )
-    (global.set $vertical_y
-      (f64.mul
-        (f64.mul
-          (global.get $v_y)
-          (global.get $sync_viewport_height)
-        )
-        (global.get $focus_distance)
-      )
-    )
-    (global.set $vertical_z
-      (f64.mul
-        (f64.mul
-          (global.get $v_z)
-          (global.get $sync_viewport_height)
-        )
-        (global.get $focus_distance)
-      )
-    )
-
-    ;; update lower_left_corner
-    (global.set $lower_left_corner_x
-      (f64.sub
-        (f64.sub
-          (f64.sub
-            (global.get $camera_origin_x)
-            (f64.div
-              (global.get $horizontal_x)
-              (f64.const 2.0)  
-            )
-          )
-          (f64.div
-            (global.get $vertical_x)
-            (f64.const 2.0)  
-          )
-        )
-        (f64.mul
-          (global.get $focus_distance)
-          (global.get $w_x)
-        )
-      )
-    )
-    (global.set $lower_left_corner_y
-      (f64.sub
-        (f64.sub
-          (f64.sub
-            (global.get $camera_origin_y)
-            (f64.div
-              (global.get $horizontal_y)
-              (f64.const 2.0)  
-            )
-          )
-          (f64.div
-            (global.get $vertical_y)
-            (f64.const 2.0)  
-          )
-        )
-        (f64.mul
-          (global.get $focus_distance)
-          (global.get $w_y)
-        )
-      )
-    )
-    (global.set $lower_left_corner_z
-      (f64.sub
-        (f64.sub
-          (f64.sub
-            (global.get $camera_origin_z)
-            (f64.div
-              (global.get $horizontal_z)
-              (f64.const 2.0)  
-            )
-          )
-          (f64.div
-            (global.get $vertical_z)
-            (f64.const 2.0)  
-          )
-        )
-        (f64.mul
-          (global.get $focus_distance)
-          (global.get $w_z)
-        )
       )
     )
   )
@@ -2229,6 +1812,430 @@
   ;; EXPORTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   
+  ;; runs through entire camera pipeline to update all values
+  (func $update_camera_values (export "update_camera_values")
+    (local $u_cross_result_x f64)
+    (local $u_cross_result_y f64)
+    (local $u_cross_result_z f64)
+
+    (local $v_cross_result_x f64)
+    (local $v_cross_result_y f64)
+    (local $v_cross_result_z f64)
+
+    (local $w_result_x f64)
+    (local $w_result_y f64)
+    (local $w_result_z f64)
+
+    (local $U_result_x f64)
+    (local $U_result_y f64)
+    (local $U_result_z f64)
+
+    (local $example f64)
+
+
+    ;; update aspect_ratio
+    (global.set $aspect_ratio
+      (f64.div 
+        (f64.convert_i32_u
+          (global.get $canvas_width)
+        )
+        (f64.convert_i32_u
+          (global.get $canvas_height)
+        )
+      )
+    )
+    
+    ;; update camera_h
+    (global.set $camera_h
+      (call $tan 
+        (f64.div
+          (global.get $camera_field_of_view)
+          (f64.const 2.0)
+        )
+      )
+    )
+
+    ;; update camera_front
+    (global.set $camera_front_x
+      (f64.mul
+        (call $cos
+          (call $degrees_to_radians
+            (global.get $yaw)
+          )
+        )
+        (call $cos
+            (call $degrees_to_radians
+            (global.get $pitch)
+          )
+        )
+      )
+    )
+    (global.set $camera_front_y
+      (call $sin
+        (call $degrees_to_radians
+          (global.get $pitch)
+        )
+      )
+    )
+    (global.set $camera_front_z
+      (f64.mul
+        (call $sin
+          (call $degrees_to_radians
+            (global.get $yaw)
+          )
+        )
+        (call $cos
+            (call $degrees_to_radians
+            (global.get $pitch)
+          )
+        )
+      )
+    )
+
+    ;; update look_at
+    (global.set $look_at_x
+      (f64.add
+        (global.get $camera_origin_x)
+        (global.get $camera_front_x)
+      )
+    )
+    (global.set $look_at_y
+      (f64.add
+        (global.get $camera_origin_y)
+        (global.get $camera_front_y)
+      )
+    )
+    (global.set $look_at_z
+      (f64.add
+        (global.get $camera_origin_z)
+        (global.get $camera_front_z)
+      )
+    )
+
+    ;; prepare data before calculating w
+    ;; camera_origin - look_at
+    (local.set $w_result_x
+      (f64.sub
+        (global.get $camera_origin_x)
+        (global.get $look_at_x)
+      )
+    )
+    (local.set $w_result_y
+      (f64.sub
+        (global.get $camera_origin_y)
+        (global.get $look_at_y)
+      )
+    )
+    (local.set $w_result_z
+      (f64.sub
+        (global.get $camera_origin_z)
+        (global.get $look_at_z)
+      )
+    )
+
+    ;; update w
+    (global.set $w_x
+      (call $vec_normalize
+        (local.get $w_result_x)
+        (local.get $w_result_y)
+        (local.get $w_result_z)
+      )
+      (drop)
+      (drop)
+    )
+    (global.set $w_y
+      (call $vec_normalize
+        (local.get $w_result_x)
+        (local.get $w_result_y)
+        (local.get $w_result_z)
+      )
+      (drop)
+    )
+    (drop)
+    (global.set $w_z
+      (call $vec_normalize
+        (local.get $w_result_x)
+        (local.get $w_result_y)
+        (local.get $w_result_z)
+      )
+    )
+    (drop)
+    (drop)
+
+    ;; prepare cross product for calculating u
+    (local.set $u_cross_result_x
+      (call $vec_cross
+        (global.get $vup_x)
+        (global.get $vup_y)
+        (global.get $vup_z)
+        (global.get $w_x)
+        (global.get $w_y)
+        (global.get $w_z)
+      )
+      (drop)
+      (drop)
+    )
+    (local.set $u_cross_result_y
+      (call $vec_cross
+        (global.get $vup_x)
+        (global.get $vup_y)
+        (global.get $vup_z)
+        (global.get $w_x)
+        (global.get $w_y)
+        (global.get $w_z)
+      )
+      (drop)
+    )
+    (drop)
+    (local.set $u_cross_result_z
+      (call $vec_cross
+        (global.get $vup_x)
+        (global.get $vup_y)
+        (global.get $vup_z)
+        (global.get $w_x)
+        (global.get $w_y)
+        (global.get $w_z)
+      )
+    )
+    (drop)
+    (drop)
+
+    ;; update u
+    (global.set $u_x
+      (call $vec_normalize
+        (local.get $u_cross_result_x)
+        (local.get $u_cross_result_y)
+        (local.get $u_cross_result_z)
+      )
+      (drop)
+      (drop)
+    )
+    (global.set $u_y
+      (call $vec_normalize
+        (local.get $u_cross_result_x)
+        (local.get $u_cross_result_y)
+        (local.get $u_cross_result_z)
+      )
+      (drop)
+    )
+    (drop)
+    (global.set $u_z
+      (call $vec_normalize
+        (local.get $u_cross_result_x)
+        (local.get $u_cross_result_y)
+        (local.get $u_cross_result_z)
+      )
+    )
+    (drop)
+    (drop)
+
+    ;; prepare cross product for calculating v
+    (local.set $v_cross_result_x
+      (call $vec_cross
+        (global.get $w_x)
+        (global.get $w_y)
+        (global.get $w_z)
+        (global.get $u_x)
+        (global.get $u_y)
+        (global.get $u_z)
+      )
+      (drop)
+      (drop)
+    )
+    (local.set $v_cross_result_y
+      (call $vec_cross
+        (global.get $w_x)
+        (global.get $w_y)
+        (global.get $w_z)
+        (global.get $u_x)
+        (global.get $u_y)
+        (global.get $u_z)
+      )
+      (drop)
+    )
+    (drop)
+    (local.set $v_cross_result_z
+      (call $vec_cross
+        (global.get $w_x)
+        (global.get $w_y)
+        (global.get $w_z)
+        (global.get $u_x)
+        (global.get $u_y)
+        (global.get $u_z)
+      )
+    )
+    (drop)
+    (drop)
+
+    ;; update v
+    (global.set $v_x
+      (call $vec_normalize
+        (local.get $v_cross_result_x)
+        (local.get $v_cross_result_y)
+        (local.get $v_cross_result_z)
+      )
+      (drop)
+      (drop)
+    )
+    (global.set $v_y
+      (call $vec_normalize
+        (local.get $v_cross_result_x)
+        (local.get $v_cross_result_y)
+        (local.get $v_cross_result_z)
+      )
+      (drop)
+    )
+    (drop)
+    (global.set $v_z
+      (call $vec_normalize
+        (local.get $v_cross_result_x)
+        (local.get $v_cross_result_y)
+        (local.get $v_cross_result_z)
+      )
+    )
+    (drop)
+    (drop)
+
+    ;; update sync_viewport_height
+    (global.set $sync_viewport_height
+      (f64.mul 
+        (f64.const 2.0)
+        (global.get $camera_h)
+      )
+    )
+
+    ;; update sync_viewport_width
+    (global.set $sync_viewport_width
+      (f64.mul
+        (global.get $sync_viewport_height)
+        (global.get $aspect_ratio)
+      )
+    )
+
+    ;; update horizontal
+    (global.set $horizontal_x
+      (f64.mul
+        (f64.mul
+          (global.get $u_x)
+          (global.get $sync_viewport_width)
+        )
+        (global.get $focus_distance)
+      )
+    )
+    (global.set $horizontal_y
+      (f64.mul
+        (f64.mul
+          (global.get $u_y)
+          (global.get $sync_viewport_width)
+        )
+        (global.get $focus_distance)
+      )
+    )
+    (global.set $horizontal_z
+      (f64.mul
+        (f64.mul
+          (global.get $u_z)
+          (global.get $sync_viewport_width)
+        )
+        (global.get $focus_distance)
+      )
+    )
+
+    ;; update vertical
+    (global.set $vertical_x
+      (f64.mul
+        (f64.mul
+          (global.get $v_x)
+          (global.get $sync_viewport_height)
+        )
+        (global.get $focus_distance)
+      )
+    )
+    (global.set $vertical_y
+      (f64.mul
+        (f64.mul
+          (global.get $v_y)
+          (global.get $sync_viewport_height)
+        )
+        (global.get $focus_distance)
+      )
+    )
+    (global.set $vertical_z
+      (f64.mul
+        (f64.mul
+          (global.get $v_z)
+          (global.get $sync_viewport_height)
+        )
+        (global.get $focus_distance)
+      )
+    )
+
+    ;; update lower_left_corner
+    (global.set $lower_left_corner_x
+      (f64.sub
+        (f64.sub
+          (f64.sub
+            (global.get $camera_origin_x)
+            (f64.div
+              (global.get $horizontal_x)
+              (f64.const 2.0)  
+            )
+          )
+          (f64.div
+            (global.get $vertical_x)
+            (f64.const 2.0)  
+          )
+        )
+        (f64.mul
+          (global.get $focus_distance)
+          (global.get $w_x)
+        )
+      )
+    )
+    (global.set $lower_left_corner_y
+      (f64.sub
+        (f64.sub
+          (f64.sub
+            (global.get $camera_origin_y)
+            (f64.div
+              (global.get $horizontal_y)
+              (f64.const 2.0)  
+            )
+          )
+          (f64.div
+            (global.get $vertical_y)
+            (f64.const 2.0)  
+          )
+        )
+        (f64.mul
+          (global.get $focus_distance)
+          (global.get $w_y)
+        )
+      )
+    )
+    (global.set $lower_left_corner_z
+      (f64.sub
+        (f64.sub
+          (f64.sub
+            (global.get $camera_origin_z)
+            (f64.div
+              (global.get $horizontal_z)
+              (f64.const 2.0)  
+            )
+          )
+          (f64.div
+            (global.get $vertical_z)
+            (f64.const 2.0)  
+          )
+        )
+        (f64.mul
+          (global.get $focus_distance)
+          (global.get $w_z)
+        )
+      )
+    )
+  )
+
   ;; save the windows actual size in pixels in wasm memory
   (func $sync_viewport (export "sync_viewport") 
     (param $prev_window_width i32) 
@@ -2287,9 +2294,32 @@
     )
     (call $update_camera_values)
   )
-  
+
+  (func $update_camera_based_on_stick_position
+    (global.set $yaw 
+      (f64.add
+        (global.get $yaw)
+        (f64.mul 
+          (global.get $right_stick_x_position)
+          (global.get $look_sensitivity)
+        )
+      )
+    )  
+    (global.set $pitch 
+      (f64.add
+        (global.get $pitch)
+        (f64.mul 
+          (global.get $right_stick_y_position)
+          (global.get $look_sensitivity)
+        )
+      )
+    )
+    (call $update_camera_values) 
+  )
+
   ;; called on each tick to update all internal state
   (func (export "tick")
+    (call $update_camera_based_on_stick_position)
     (call $render_to_internal_buffer)
   )
   
