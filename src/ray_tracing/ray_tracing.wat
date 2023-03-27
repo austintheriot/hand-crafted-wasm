@@ -84,6 +84,7 @@
 
   (global $object_list_ptr i32 (i32.const 40000))
   (global $object_size i32 (i32.const 76))
+  ;; 1 index per object
   (global $object_list_len (mut i32) (i32.const 0))
 
   ;; GENERAL CONSTANTS
@@ -1531,12 +1532,9 @@
 
     ;; initialize data for looping
     (local.set $closest_so_far (global.get $max_t))
-    (local.set $start_i (global.get $object_list_ptr))
-    (local.set $end_i (i32.add
-      (global.get $object_list_ptr)
-      (global.get $object_list_len)
-    ))
-    (local.set $step (global.get $object_size))
+    (local.set $start_i (i32.const 0))
+    (local.set $end_i (global.get $object_list_len))
+    (local.set $step (i32.const 1))
     (local.set $any_object_hit (i32.const 0))
 
     ;; iterate through objects in world
@@ -1959,7 +1957,6 @@
                     )
                   )
 
-                  
                   (call $draw_pixel 
                     ;; supplies the pixel coordinates
                     (local.get $i)
@@ -1970,16 +1967,6 @@
                       (local.get $t)
                     )
                   )
-                  
-                  ;; debugging colors / pixels
-                  ;; (call $log_2 (local.get $i) (local.get $j))
-                  ;; (call $log_float_2 (local.get $s) (local.get $t))
-                  ;; (call $get_pixel_color
-                  ;;   (local.get $s)
-                  ;;   (local.get $t)
-                  ;; )
-                  ;; (call $log_4)
-                  ;; (call $log (i32.const 11111111))
                   
                   (local.set $j (i32.add (local.get $j) (local.get $step)))
                   ;; return to beginning of loop
@@ -2017,7 +2004,10 @@
     (local.set $new_memory_address
       (i32.add
         (global.get $object_list_ptr)
-        (global.get $object_list_len)
+        (i32.mul
+          (global.get $object_list_len)
+          (global.get $object_size)
+        )
       )
     )
 
@@ -2076,7 +2066,7 @@
     (global.set $object_list_len
       (i32.add
         (global.get $object_list_len)
-        (global.get $object_size)
+        (i32.const 1)
       )
     )
   )
