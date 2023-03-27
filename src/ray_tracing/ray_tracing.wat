@@ -59,6 +59,7 @@
   (import "console" "log" (func $log_float_2 (param f64) (param f64)))
   (import "console" "log" (func $log_float_6 (param f64) (param f64) (param f64) (param f64) (param f64) (param f64)))
   (import "error" "throw" (func $throw (param i32)))
+  (import "Date" "now" (func $now (result f64)))
 
   ;; update actual canvas dimensions based on inner aspect-ratio calculations
   (import "canvas" "updateCanvasDimensions" (func $update_canvas_dimensions (param $width i32) (param $height i32)))
@@ -168,6 +169,11 @@
 
   (global $min_t f64 (f64.const 0.001))
   (global $max_t f64 (f64.const 100000))
+
+  (global $prev_now (mut f64) (f64.const 0.0))
+  (global $now (mut f64) (f64.const 0.0))
+
+  (global $movement_speed (mut f64) (f64.const 0.001))
 
   ;; controls
   (global $look_sensitivity (export "look_sensitivity") (mut f64) (f64.const 3.0))
@@ -2317,15 +2323,117 @@
     (call $update_camera_values) 
   )
 
+  (func $update_position_based_on_controls
+    (local $dt f64)
+    (global.set $now
+      (call $now)
+    )
+    (local.set $dt
+      (f64.sub
+        (global.get $now)
+        (global.get $prev_now)
+      )
+    )
+    (global.set $prev_now
+      (global.get $now)
+    )
+
+    ;; do not update if no controls down
+    (if (i32.and
+          (f64.eq (global.get $left_stick_x_position) (f64.const 0.0))
+          (f64.eq (global.get $left_stick_y_position) (f64.const 0.0))
+        )
+      (then 
+        (return)
+      )
+    )
+
+    (call $log_float (global.get $camera_origin_x))
+    (call $log_float (global.get $camera_origin_y))
+    (call $log_float (global.get $camera_origin_z))
+    
+    ;; set y component
+    (global.set $camera_origin_x
+      (global.set $camera_origin_y
+        (global.set $camera_origin_z
+          (call $vec_add_vec
+            (global.get $camera_origin_x)
+            (global.get $camera_origin_y)
+            (global.get $camera_origin_z)
+            (call $vec_mul_constant
+              (call $vec_mul_constant
+                (call $vec_mul_constant
+                  (global.get $camera_front_x)
+                  (global.get $camera_front_y)
+                  (global.get $camera_front_z)
+                  (global.get $left_stick_y_position)
+                )
+                (global.get $movement_speed)
+              )
+              (local.get $dt)
+            )
+          )
+        )
+      )
+    )
+
+    ;; set x component
+    (global.set $camera_origin_x
+      (global.set $camera_origin_y
+        (global.set $camera_origin_z
+          (call $vec_add_vec
+            (global.get $camera_origin_x)
+            (global.get $camera_origin_y)
+            (global.get $camera_origin_z)
+            (call $vec_mul_constant
+              (call $vec_mul_constant
+                (call $vec_mul_constant
+                  (call $vec_cross
+                    (global.get $camera_front_x)
+                    (global.get $camera_front_y)
+                    (global.get $camera_front_z)
+                    (global.get $vup_x)
+                    (global.get $vup_y)
+                    (global.get $vup_z)
+                  )
+                  (global.get $left_stick_x_position)
+                )
+                (global.get $movement_speed)
+              )
+              (local.get $dt)
+            )
+          )
+        )
+      )
+    )
+
+    (call $log_float (global.get $camera_origin_x))
+    (call $log_float (global.get $camera_origin_y))
+    (call $log_float (global.get $camera_origin_z))
+  )
+
   ;; called on each tick to update all internal state
   (func (export "tick")
     (call $update_camera_based_on_stick_position)
+    (call $update_position_based_on_controls)
     (call $render_to_internal_buffer)
+    (call $update_camera_values) 
+  )
+
+  (func $set_initial_now
+    (global.set $now
+      (call $now)
+    )
+    (global.set $prev_now
+      (global.get $now)
+    )
   )
   
   (func (export "init") 
     (param $initial_canvas_width i32) 
     (param $initial_canvas_height i32)
+
+    (call $set_initial_now)
 
     (call $generate_default_objects_in_world)
 

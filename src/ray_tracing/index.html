@@ -136,6 +136,7 @@
           console,
           canvas: { updateCanvasDimensions },
           error: { throw: throwError },
+          Date,
         });
       })
       .then(({ instance: { exports: wasm } }) => {
@@ -216,12 +217,10 @@
           const cssX = (smallestX * 0.5 - 0.5) * 100;
           const cssY = (smallestY * 0.5 - 0.5) * 100;
 
-          if (side === "right") {
-            // y must be inverted to match wasm memory layout
-            // (since web uses y=0 as being at the TOP of the window)
-            wasm.right_stick_y_position.value = -smallestY;
-            wasm.right_stick_x_position.value = smallestX;
-          }
+          // y must be inverted to match wasm memory layout
+          // (since web uses y=0 as being at the TOP of the window)
+          wasm[`${side}_stick_y_position`].value = -smallestY;
+          wasm[`${side}_stick_x_position`].value = smallestX;
 
           thumbIndicator.style.setProperty(
             "transform",
@@ -235,10 +234,8 @@
               ? leftThumbLocationIndicatorButton
               : rightThumbLocationIndicatorButton;
 
-          if (side === "right") {
-            wasm.right_stick_y_position.value = 0;
-            wasm.right_stick_x_position.value = 0;
-          }
+          wasm[`${side}_stick_y_position`].value = 0;
+          wasm[`${side}_stick_x_position`].value = 0;
 
           thumbIndicator.style.setProperty(
             "transform",
