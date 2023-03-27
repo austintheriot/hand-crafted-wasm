@@ -9,7 +9,7 @@
     body {
       margin: 0;
       padding: 0;
-      position: 'relative';
+      position: "relative";
       width: 100vw;
       height: 100vh;
       overflow: hidden;
@@ -17,7 +17,7 @@
 
     canvas {
       width: 100vw;
-      max-width: 100vh;
+      height: 100vh;
       object-fit: cover;
       touch-action: none;
 
@@ -44,23 +44,27 @@
         align-items: center;
       }
 
-      .left-stick, .right-stick {
-        width: 10rem;
-        height: 10rem;
+      .left-stick,
+      .right-stick {
+        width: 160px;
+        height: 160px;
+        min-width: 160px;
+        min-height: 160px;
         background-color: transparent;
         border: 3px solid #ffffffaa;
         border-radius: 50%;
         position: relative;
       }
 
-      .thumb-location-indicator {
+      .left-thumb-location-indicator,
+      .right-thumb-location-indicator {
         display: block;
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 5rem;
-        height: 5rem;
+        width: 80px;
+        height: 80px;
         border-radius: 50%;
         background-color: transparent;
         border: 1px solid #ffffff77;
@@ -68,13 +72,11 @@
     }
 
     /* replace with @media (pointer: fine) or (pointer: coarse)  */
-      @media (min-width: 501px) {
+    @media (min-width: 501px) {
       .touch-controller {
         display: none;
       }
     }
-
-    
   </style>
 </head>
 
@@ -82,37 +84,102 @@
   <canvas></canvas>
   <section class="touch-controller">
     <button class="left-stick">
-      <span class="thumb-location-indicator"></span>
+      <span class="left-thumb-location-indicator"></span>
     </button>
     <button class="right-stick">
-      <span class="thumb-location-indicator"></span>
+      <span class="right-thumb-location-indicator"></span>
     </button>
   </section>
   <script>
     const canvas = document.querySelector("canvas");
     const ctx = canvas.getContext("2d");
-    const leftStickButton = document.querySelector('.left-stick');
-    const rightStickButton = document.querySelector('.right-stick');
+    const leftStickButton = document.querySelector(".left-stick");
+    const leftThumbLocationIndicatorButton = document.querySelector(
+      ".left-thumb-location-indicator"
+    );
+    const rightStickButton = document.querySelector(".right-stick");
+    const rightThumbLocationIndicatorButton = document.querySelector(
+      ".right-thumb-location-indicator"
+    );
 
     const leftStickTouch = {
       current: 0,
     };
     const rightStickTouch = {
       current: 0,
-    }
+    };
 
-    leftStickButton.addEventListener('touchstart', (e) => {
-      console.log({ e })
-      const [{ clientX, clientY }] = e.targetTouches;
-    })
+    const makeHandleTouchMove = (side) => (e) => {
+      const stickButton = side === "left" ? leftStickButton : rightStickButton;
+      const thumbIndicator =
+        side === "left"
+          ? leftThumbLocationIndicatorButton
+          : rightThumbLocationIndicatorButton;
+      const {
+        width,
+        height,
+        x: elementX,
+        y: elementY,
+      } = stickButton.getBoundingClientRect();
+      const [{ pageX, pageY }] = e.targetTouches;
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      const elementCenterX = elementX + width / 2;
+      const elementCenterY = elementY + height / 2;
+      const distFromCenterX = pageX - elementCenterX;
+      const distFromCenterY = pageY - elementCenterY;
 
-    leftStickButton.addEventListener('touchmove', (e) => {
-      const { width, height, y } = leftStickButton.getBoundingClientRect();
-      const [{ clientX, clientY }] = e.targetTouches;
-      const px = clientX / width;
-      const py = clientY / height;
-      console.log('touchmove: ', {e, clientX, clientY, px, py, width, height})
-    })
+      const STICK_SENSITIVITY = 2;
+
+      // vector from the center of the button to the current element,
+      // as a percentage of the element's width / height--
+      // if you want non-limited values (i.e. dragging your finger outside
+      // of the element itself is considered a stronger vector), then you
+      // should use this value
+      const px = (distFromCenterX / width) * STICK_SENSITIVITY;
+      const py = (distFromCenterY / height) * STICK_SENSITIVITY;
+
+      // get both numbers in range -1->1 going from left-to-right and bottom-to-top
+      const BORDER_OFFSET = 0.1;
+      const vectorLength = Math.sqrt(px ** 2 + py ** 2) + BORDER_OFFSET;
+
+      // convert [px, py] into a unit vector to keep it in it's containing circle
+      // (to make it act similarly to a joystick)
+      const unitX = px / vectorLength;
+      const unitY = py / vectorLength;
+
+      /** Take whichever is smaller: the unit vector one or the original */
+      const smallestX = vectorLength < 1 ? px : unitX;
+      const smallestY = vectorLength < 1 ? py : unitY;
+
+      // map from -1->1 to -1->0 -> -100 -> 5
+      const cssX = (smallestX * 0.5 - 0.5) * 100;
+      const cssY = (smallestY * 0.5 - 0.5) * 100;
+
+      thumbIndicator.style.setProperty(
+        "transform",
+        `translate(${cssX}%, ${cssY}%)`
+      );
+    };
+
+    const makeHandleTouchEnd = (side) => () => {
+      const thumbIndicator =
+        side === "left"
+          ? leftThumbLocationIndicatorButton
+          : rightThumbLocationIndicatorButton;
+
+      thumbIndicator.style.setProperty("transform", `translate(-50%, -50%)`);
+    };
+
+    const leftHandleTouchMove = makeHandleTouchMove("left");
+    leftStickButton.addEventListener("touchstart", leftHandleTouchMove);
+    leftStickButton.addEventListener("touchmove", leftHandleTouchMove);
+    leftStickButton.addEventListener('touchend', makeHandleTouchEnd('left'))
+
+    const rightHandleTouchMove = makeHandleTouchMove("right");
+    rightStickButton.addEventListener("touchstart", rightHandleTouchMove);
+    rightStickButton.addEventListener("touchmove", rightHandleTouchMove);
+    rightStickButton.addEventListener('touchend', makeHandleTouchEnd('right'))
 
     // update canvas dimensions from within wasm
     const updateCanvasDimensions = (width, height) => {
