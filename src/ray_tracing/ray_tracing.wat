@@ -623,6 +623,7 @@
       )
       (drop)
     )
+    (drop)
     (global.set $w_z
       (call $vec_normalize
         (local.get $w_result_x)
@@ -630,6 +631,8 @@
         (local.get $w_result_z)
       )
     )
+    (drop)
+    (drop)
 
     ;; prepare cross product for calculating u
     (local.set $u_cross_result_x
@@ -655,6 +658,7 @@
       )
       (drop)
     )
+    (drop)
     (local.set $u_cross_result_z
       (call $vec_cross
         (global.get $vup_x)
@@ -665,6 +669,8 @@
         (global.get $w_z)
       )
     )
+    (drop)
+    (drop)
 
     ;; update u
     (global.set $u_x
@@ -684,6 +690,7 @@
       )
       (drop)
     )
+    (drop)
     (global.set $u_z
       (call $vec_normalize
         (local.get $u_cross_result_x)
@@ -691,6 +698,8 @@
         (local.get $u_cross_result_z)
       )
     )
+    (drop)
+    (drop)
 
     ;; prepare cross product for calculating v
     (local.set $v_cross_result_x
@@ -716,6 +725,7 @@
       )
       (drop)
     )
+    (drop)
     (local.set $v_cross_result_z
       (call $vec_cross
         (global.get $w_x)
@@ -726,6 +736,8 @@
         (global.get $u_z)
       )
     )
+    (drop)
+    (drop)
 
     ;; update v
     (global.set $v_x
@@ -745,6 +757,7 @@
       )
       (drop)
     )
+    (drop)
     (global.set $v_z
       (call $vec_normalize
         (local.get $v_cross_result_x)
@@ -752,6 +765,8 @@
         (local.get $v_cross_result_z)
       )
     )
+    (drop)
+    (drop)
 
     ;; update sync_viewport_height
     (global.set $sync_viewport_height
