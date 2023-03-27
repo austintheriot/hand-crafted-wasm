@@ -4,46 +4,115 @@
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Document</title>
+  <title>Ray Tracing</title>
   <style>
     body {
+      margin: 0;
+      padding: 0;
+      position: 'relative';
       width: 100vw;
       height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      margin: 0;
-      position: "relative";
-      background-color: black;
       overflow: hidden;
     }
 
     canvas {
-      width: calc(100% + 1rem);
-      height: calc(100% + 1rem);
-      object-fit: contain;
+      width: 100vw;
+      max-width: 100vh;
+      object-fit: cover;
       touch-action: none;
+
       /* for debugging */
-      background-color: black;
+      background-color: lightpink;
 
       /* default is to smooth edges of pixels on canvas */
       image-rendering: pixelated;
       image-rendering: crisp-edges;
+      z-index: 0;
     }
 
-    button {
-      margin: 2rem;
-      width: fit-content;
+    /* replace with @media (pointer: none) */
+    @media (max-width: 500px) {
+      .touch-controller {
+        position: fixed;
+        bottom: 2rem;
+        left: 0;
+        width: 100vw;
+        height: 10rem;
+        z-index: 1;
+        display: flex;
+        justify-content: space-evenly;
+        align-items: center;
+      }
+
+      .left-stick, .right-stick {
+        width: 10rem;
+        height: 10rem;
+        background-color: transparent;
+        border: 3px solid #ffffffaa;
+        border-radius: 50%;
+        position: relative;
+      }
+
+      .thumb-location-indicator {
+        display: block;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 5rem;
+        height: 5rem;
+        border-radius: 50%;
+        background-color: transparent;
+        border: 1px solid #ffffff77;
+      }
     }
+
+    /* replace with @media (pointer: fine) or (pointer: coarse)  */
+      @media (min-width: 501px) {
+      .touch-controller {
+        display: none;
+      }
+    }
+
+    
   </style>
 </head>
 
 <body>
   <canvas></canvas>
+  <section class="touch-controller">
+    <button class="left-stick">
+      <span class="thumb-location-indicator"></span>
+    </button>
+    <button class="right-stick">
+      <span class="thumb-location-indicator"></span>
+    </button>
+  </section>
   <script>
     const canvas = document.querySelector("canvas");
     const ctx = canvas.getContext("2d");
+    const leftStickButton = document.querySelector('.left-stick');
+    const rightStickButton = document.querySelector('.right-stick');
+
+    const leftStickTouch = {
+      current: 0,
+    };
+    const rightStickTouch = {
+      current: 0,
+    }
+
+    leftStickButton.addEventListener('touchstart', (e) => {
+      console.log({ e })
+      const [{ clientX, clientY }] = e.targetTouches;
+    })
+
+    leftStickButton.addEventListener('touchmove', (e) => {
+      const { width, height, y } = leftStickButton.getBoundingClientRect();
+      const [{ clientX, clientY }] = e.targetTouches;
+      const px = clientX / width;
+      const py = clientY / height;
+      console.log('touchmove: ', {e, clientX, clientY, px, py, width, height})
+    })
 
     // update canvas dimensions from within wasm
     const updateCanvasDimensions = (width, height) => {
