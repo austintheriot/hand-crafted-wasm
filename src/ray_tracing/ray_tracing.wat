@@ -2146,107 +2146,6 @@
     )
   )
 
-  (func $test_extracting_info
-    (local $test_sphere_center_x f64)
-    (local $test_sphere_center_y f64)
-    (local $test_sphere_center_z f64)
-    (local $test_sphere_radius f64)
-    (local $test_sphere_material_type i32)
-    (local $test_sphere_material_albedo_r f64)
-    (local $test_sphere_material_albedo_g f64)
-    (local $test_sphere_material_albedo_b f64)
-    (local $test_sphere_material_fuzz f64)
-    (local $test_sphere_material_refraction_index f64)
-
-    
-    
-    (call $log_float 
-      (local.get $test_sphere_center_x)
-    )
-    (call $log_float 
-      (local.get $test_sphere_center_y)
-    )
-    (call $log_float 
-      (local.get $test_sphere_center_z)
-    )
-    (call $log_float 
-      (local.get $test_sphere_radius)
-    )
-    (call $log
-      (local.get $test_sphere_material_type)
-    )
-    (call $log_float 
-      (local.get $test_sphere_material_albedo_r)
-    )
-    (call $log_float 
-      (local.get $test_sphere_material_albedo_g)
-    )
-    (call $log_float 
-      (local.get $test_sphere_material_albedo_b)
-    )
-    (call $log_float 
-      (local.get $test_sphere_material_fuzz)
-    )
-    (call $log_float 
-      (local.get $test_sphere_material_refraction_index)
-    )
-    (call $log (i32.const 111111111))
-
-    (local.set $test_sphere_center_x
-      (local.set $test_sphere_center_y
-        (local.set $test_sphere_center_z
-          (local.set $test_sphere_radius
-            (local.set $test_sphere_material_type
-              (local.set $test_sphere_material_albedo_r
-                (local.set $test_sphere_material_albedo_g
-                  (local.set $test_sphere_material_albedo_b
-                    (local.set $test_sphere_material_fuzz
-                      (local.set $test_sphere_material_refraction_index
-                        (call $get_object_from_memory (i32.const 1))
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
-    )
-    
-    (call $log_float 
-      (local.get $test_sphere_center_x)
-    )
-    (call $log_float 
-      (local.get $test_sphere_center_y)
-    )
-    (call $log_float 
-      (local.get $test_sphere_center_z)
-    )
-    (call $log_float 
-      (local.get $test_sphere_radius)
-    )
-    (call $log
-      (local.get $test_sphere_material_type)
-    )
-    (call $log_float 
-      (local.get $test_sphere_material_albedo_r)
-    )
-    (call $log_float 
-      (local.get $test_sphere_material_albedo_g)
-    )
-    (call $log_float 
-      (local.get $test_sphere_material_albedo_b)
-    )
-    (call $log_float 
-      (local.get $test_sphere_material_fuzz)
-    )
-    (call $log_float 
-      (local.get $test_sphere_material_refraction_index)
-    )
-    (call $log (i32.const 111111111))
-  )
-
   (func $generate_default_objects_in_world
     ;; sphere data
     (local $sphere_center_x f64)
@@ -2375,8 +2274,7 @@
   
   ;; called on each tick to update all internal state
   (func (export "tick")
-    ;; (call $render_to_internal_buffer)
-    (call $test_extracting_info)
+    (call $render_to_internal_buffer)
   )
   
   (func (export "init") 
