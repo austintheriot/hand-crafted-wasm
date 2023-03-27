@@ -36,3 +36,9 @@ Assembling .wat to debug .wasm via binaryen:
 ```sh
 wasm-as src/ray_tracing/ray_tracing.wat -o src/ray_tracing/ray_tracing.wasm --debuginfo -all --debug
 ```
+
+Assemblin .wat to debug .wasm via wabt (this is useful for debugging files):
+
+```sh
+wat2wasm src/ray_tracing/ray_tracing.wat -o src/ray_tracing/ray_tracing.wasm --debug-parser --enable-all --debug-names
+```

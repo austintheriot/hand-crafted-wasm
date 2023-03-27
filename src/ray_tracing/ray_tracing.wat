@@ -17,7 +17,6 @@
   ;;  ($direction_vector_z f64)
   ;;
   ;;  HitRecord
-  ;;  ($hit_anything i32)
   ;;  ($hit_point_x f64)
   ;;  ($hit_point_y f64)
   ;;  ($hit_point_z f64)
@@ -83,9 +82,9 @@
   ;; largest possible size the canvas can be in any one direction in pixels
   (global $max_dimension i32 (i32.const 100))
 
-  (global $object_ptr i32 (i32.const 40000))
+  (global $object_list_ptr i32 (i32.const 40000))
   (global $object_size i32 (i32.const 76))
-  (global $object_len (mut i32) (i32.const 0))
+  (global $object_list_len (mut i32) (i32.const 0))
 
   ;; GENERAL CONSTANTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -226,7 +225,7 @@
   )
 
   ;; normalize one component when length is already known
-  (func $vec_normalize_with_length (param $xyz f64) (param $length f64)
+  (func $vec_normalize_with_length (param $xyz f64) (param $length f64) (result f64)
     (f64.div (local.get $xyz) (local.get $length))
   )
 
@@ -1144,6 +1143,10 @@
     (param $sphere_material_fuzz f64)
     (param $sphere_material_refraction_index f64)
     
+    ;; used to check which collission was closer when
+    ;; there are multiple objects in a scene
+    (param $min_t_local f64)
+    
     ;; Ray data
     (param $ray_origin_x f64)
     (param $ray_origin_y f64)
@@ -1153,7 +1156,6 @@
     (param $ray_direction_z f64)
 
     ;; HitRecord data (in)
-    (param $in_hit_anything i32)
     (param $in_hit_point_x f64)
     (param $in_hit_point_y f64)
     (param $in_hit_point_z f64)
@@ -1170,10 +1172,9 @@
     (param $in_material_refraction_index f64)
 
     ;; return HitRecord
-    (result i32 f64 f64 f64 f64 f64 f64 f64 i32 i32 f64 f64 f64 f64 f64)
+    (result f64 f64 f64 f64 f64 f64 f64 i32 i32 f64 f64 f64 f64 f64 i32)
 
     ;; HitRecord data (out)
-    (local $out_hit_anything i32)
     (local $out_hit_point_x f64)
     (local $out_hit_point_y f64)
     (local $out_hit_point_z f64)
@@ -1188,6 +1189,9 @@
     (local $out_material_albedo_b f64)
     (local $out_material_fuzz f64)
     (local $out_material_refraction_index f64)
+
+    ;; determine whether sphere was hit
+    (local $hit_object i32)
     
     ;; sphere collission detection variables
     (local $oc_x f64)
@@ -1204,7 +1208,6 @@
     (local $outward_normal_z f64)
 
     ;; initialize HitRecord data (out) with data coming in
-    (local.set $out_hit_anything (local.get $in_hit_anything ))
     (local.set $out_hit_point_x (local.get $in_hit_point_x ))
     (local.set $out_hit_point_y (local.get $in_hit_point_y ))
     (local.set $out_hit_point_z (local.get $in_hit_point_z ))
@@ -1219,7 +1222,6 @@
     (local.set $out_material_albedo_b (local.get $in_material_albedo_b))
     (local.set $out_material_fuzz (local.get $in_material_fuzz))
     (local.set $out_material_refraction_index (local.get $in_material_refraction_index))
-
 
     ;; collission detection with spehere
     (local.set $oc_x
@@ -1284,13 +1286,13 @@
     )
 
     ;; assume a hit and disprove in the following blocks
-    (local.set $out_hit_anything (i32.const 1))
+    (local.set $hit_object (i32.const 1))
 
     (block $determine_hit
       (if (f64.lt (local.get $disctriminant) (f64.const 0.0))
         (then
           ;; no hit
-          (local.set $out_hit_anything (i32.const 0))
+          (local.set $hit_object (i32.const 0))
           (br $determine_hit)
         )
         (else 
@@ -1314,7 +1316,7 @@
           (if (i32.or
                 (f64.lt
                   (local.get $root)
-                  (global.get $min_t)
+                  (local.get $min_t_local)
                 )
                 (f64.lt
                   (global.get $max_t)
@@ -1336,7 +1338,7 @@
               (if (i32.or
                     (f64.lt
                       (local.get $root)
-                      (global.get $min_t)
+                      (local.get $min_t_local)
                     )
                     (f64.lt
                       (global.get $max_t)
@@ -1345,7 +1347,7 @@
                   )
                 (then
                   ;; there was a hit, but it was out of range
-                  (local.set $out_hit_anything (i32.const 0))
+                  (local.set $hit_object (i32.const 0))
                   (br $determine_hit)
                 )
               )
@@ -1438,7 +1440,6 @@
     )
 
     ;; return the HitRecord data
-    (local.get $out_hit_anything)
     (local.get $out_hit_point_x)
     (local.get $out_hit_point_y)
     (local.get $out_hit_point_z)
@@ -1453,6 +1454,10 @@
     (local.get $out_material_albedo_b)
     (local.get $out_material_fuzz)
     (local.get $out_material_refraction_index)
+    
+    ;; return on top of stack for checking if there was a hit
+    ;; beore assigning the rest of the variables
+    (local.get $hit_object)
   )
 
   ;; returns HitRecord
@@ -1465,10 +1470,9 @@
     (param $ray_direction_z f64)
 
     ;; return HitRecord
-    (result i32 f64 f64 f64 f64 f64 f64 f64 i32 i32 f64 f64 f64 f64 f64)
+    (result f64 f64 f64 f64 f64 f64 f64 i32 i32 f64 f64 f64 f64 f64 i32)
 
-    ;; HitRecord local data
-    (local $hit_anything i32)
+    ;; single HitRecord local data
     (local $hit_point_x f64)
     (local $hit_point_y f64)
     (local $hit_point_z f64)
@@ -1483,6 +1487,10 @@
     (local $material_albedo_b f64)
     (local $material_fuzz f64)
     (local $material_refraction_index f64)
+
+    ;; $local_object_hit here refers to when testing 
+    ;; against a single object (not all objects in the scene)
+    (local $local_object_hit i32)
 
     ;; Sphere test data
     (local $test_sphere_center_x f64)
@@ -1503,6 +1511,13 @@
     (local $i i32)
     (local $step i32)
 
+    ;; tested accross all objects 
+    ;; $any_object_hit refers to any hits
+    ;; accross all objects in the scene,
+    ;; compared to $local_object_hit, which refers
+    ;; to a single object being tested
+    (local $any_object_hit i32)
+
     (local.set $test_sphere_center_x (f64.const 0.0))
     (local.set $test_sphere_center_y (f64.const 0.0))
     (local.set $test_sphere_center_z (f64.const -1.0))
@@ -1516,12 +1531,13 @@
 
     ;; initialize data for looping
     (local.set $closest_so_far (global.get $max_t))
-    (local.set $start_i (global.get $object_ptr))
+    (local.set $start_i (global.get $object_list_ptr))
     (local.set $end_i (i32.add
-      (global.get $object_ptr)
-      (global.get $object_len)
+      (global.get $object_list_ptr)
+      (global.get $object_list_len)
     ))
     (local.set $step (global.get $object_size))
+    (local.set $any_object_hit (i32.const 0))
 
     ;; iterate through objects in world
     (block $outer_loop_block 
@@ -1531,8 +1547,88 @@
         (if (i32.lt_s (local.get $i) (local.get $end_i))
           (then
 
-            (call $log (i32.const 0))
-            ;; todo - update $hit_sphere to take $max_t variable
+            (block $check_sphere_hit
+              (call $hit_sphere
+                ;; Sphere data
+                (local.get $test_sphere_center_x)
+                (local.get $test_sphere_center_y)
+                (local.get $test_sphere_center_z)
+                (local.get $test_sphere_radius)
+                (local.get $test_sphere_material_type)
+                (local.get $test_sphere_material_albedo_r)
+                (local.get $test_sphere_material_albedo_g)
+                (local.get $test_sphere_material_albedo_b)
+                (local.get $test_sphere_material_fuzz)
+                (local.get $test_sphere_material_refraction_index)
+                ;; used to find the closest collission
+                (local.get $closest_so_far)
+                ;; Ray data
+                (local.get $ray_origin_x)
+                (local.get $ray_origin_y)
+                (local.get $ray_origin_z)
+                (local.get $ray_direction_x)
+                (local.get $ray_direction_y)
+                (local.get $ray_direction_z)
+                ;; HitRecord data (in)
+                (local.get $hit_point_x)
+                (local.get $hit_point_y)
+                (local.get $hit_point_z)
+                (local.get $hit_t)
+                (local.get $normal_x)
+                (local.get $normal_y)
+                (local.get $normal_z)
+                (local.get $front_face)
+                (local.get $material_type)
+                (local.get $material_albedo_r)
+                (local.get $material_albedo_g)
+                (local.get $material_albedo_b)
+                (local.get $material_fuzz)
+                (local.get $material_refraction_index)
+              )
+
+              ;; pop this value off the stack first to check
+              ;; if anything was hit before assigning variables
+              (local.set $local_object_hit)
+
+              ;; if not hit occurred, do not overwrite previous hit data
+              (if (local.get $local_object_hit)
+                (then
+                  (br $check_sphere_hit)
+                )
+              )
+
+              ;; pop values off of stack from $hit_sphere
+              ;; and assign hit_record data
+              (local.set $hit_point_x
+                (local.set $hit_point_y
+                  (local.set $hit_point_z
+                    (local.set $hit_t
+                      (local.set $normal_x
+                        (local.set $normal_y
+                          (local.set $normal_z
+                            (local.set $front_face
+                              (local.set $material_type
+                                (local.set $material_albedo_r
+                                  (local.set $material_albedo_g
+                                    (local.set $material_albedo_b
+                                      (local.set $material_fuzz
+                                        (local.set $material_refraction_index)
+                                      )
+                                    )
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              ) 
+              (local.set $any_object_hit (i32.const 1))
+              (local.set $closest_so_far (local.get $hit_t))
+            )
             
             (local.set $i (i32.add (local.get $i) (local.get $step)))
             ;; return to beginning of loop
@@ -1544,75 +1640,7 @@
       )
     )
 
-    (local.set $hit_anything
-      (local.set $hit_point_x
-        (local.set $hit_point_y
-          (local.set $hit_point_z
-            (local.set $hit_t
-              (local.set $normal_x
-                (local.set $normal_y
-                  (local.set $normal_z
-                    (local.set $front_face
-                      (local.set $material_type
-                        (local.set $material_albedo_r
-                          (local.set $material_albedo_g
-                            (local.set $material_albedo_b
-                              (local.set $material_fuzz
-                                (local.set $material_refraction_index
-                                  (call $hit_sphere
-                                    ;; Sphere data
-                                    (local.get $test_sphere_center_x)
-                                    (local.get $test_sphere_center_y)
-                                    (local.get $test_sphere_center_z)
-                                    (local.get $test_sphere_radius)
-                                    (local.get $test_sphere_material_type)
-                                    (local.get $test_sphere_material_albedo_r)
-                                    (local.get $test_sphere_material_albedo_g)
-                                    (local.get $test_sphere_material_albedo_b)
-                                    (local.get $test_sphere_material_fuzz)
-                                    (local.get $test_sphere_material_refraction_index)
-                                    ;; Ray data
-                                    (local.get $ray_origin_x)
-                                    (local.get $ray_origin_y)
-                                    (local.get $ray_origin_z)
-                                    (local.get $ray_direction_x)
-                                    (local.get $ray_direction_y)
-                                    (local.get $ray_direction_z)
-                                    ;; HitRecord data (in)
-                                    (local.get $hit_anything)
-                                    (local.get $hit_point_x)
-                                    (local.get $hit_point_y)
-                                    (local.get $hit_point_z)
-                                    (local.get $hit_t)
-                                    (local.get $normal_x)
-                                    (local.get $normal_y)
-                                    (local.get $normal_z)
-                                    (local.get $front_face)
-                                    (local.get $material_type)
-                                    (local.get $material_albedo_r)
-                                    (local.get $material_albedo_g)
-                                    (local.get $material_albedo_b)
-                                    (local.get $material_fuzz)
-                                    (local.get $material_refraction_index)
-                                  )
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
-      )
-    )
-
     ;; return HitRecord data
-    (local.get $hit_anything)
     (local.get $hit_point_x)
     (local.get $hit_point_y)
     (local.get $hit_point_z)
@@ -1627,6 +1655,9 @@
     (local.get $material_albedo_b)
     (local.get $material_fuzz)
     (local.get $material_refraction_index)
+
+    ;; return if any object in the scene was hit
+    (local.get $any_object_hit)
   )
 
   ;; accepts ray and returns the color that ray should be
@@ -1645,7 +1676,6 @@
     (local $color_b f64)
 
     ;; HitRecord data
-    (local $hit_anything i32)
     (local $hit_point_x f64)
     (local $hit_point_y f64)
     (local $hit_point_z f64)
@@ -1660,6 +1690,8 @@
     (local $material_albedo_b f64)
     (local $material_fuzz f64)
     (local $material_refraction_index f64)
+
+    (local $any_object_hit i32)
 
     ;; each ray starts out at full brightness
     (local.set $color_r (f64.const 1.0))
@@ -1687,21 +1719,21 @@
       )
     )
 
-    (local.set $hit_anything
-      (local.set $hit_point_x
-        (local.set $hit_point_y
-          (local.set $hit_point_z
-            (local.set $hit_t
-              (local.set $normal_x
-                (local.set $normal_y
-                  (local.set $normal_z
-                    (local.set $front_face
-                      (local.set $material_type
-                        (local.set $material_albedo_r
-                          (local.set $material_albedo_g
-                            (local.set $material_albedo_b
-                              (local.set $material_fuzz
-                                (local.set $material_refraction_index
+    (local.set $hit_point_x
+      (local.set $hit_point_y
+        (local.set $hit_point_z
+          (local.set $hit_t
+            (local.set $normal_x
+              (local.set $normal_y
+                (local.set $normal_z
+                  (local.set $front_face
+                    (local.set $material_type
+                      (local.set $material_albedo_r
+                        (local.set $material_albedo_g
+                          (local.set $material_albedo_b
+                            (local.set $material_fuzz
+                              (local.set $material_refraction_index
+                                (local.set $any_object_hit
                                   (call $hit_world
                                     (local.get $ray_origin_x)
                                     (local.get $ray_origin_y)
@@ -1726,7 +1758,7 @@
       )
     )
 
-    (if (i32.eq (local.get $hit_anything) (i32.const 0))
+    (if (i32.eq (local.get $any_object_hit) (i32.const 0))
       ;; not hit detected: show background
       (then 
         (return
@@ -1735,33 +1767,30 @@
           (local.get $color_b)
         )
       )
-      ;; hit detected: show object
-      (else
-        (return 
-          ;; display's the circle's normals for now
-          ;; todo - replace with scattering calculations
-          (f64.mul
-            (f64.const 0.5)
-            (f64.add
-              (local.get $normal_x)
-              (f64.const 1.0)
-            )
-          )
-          (f64.mul
-            (f64.const 0.5)
-            (f64.add
-              (local.get $normal_y)
-              (f64.const 1.0)
-            )
-          )
-          (f64.mul
-            (f64.const 0.5)
-            (f64.add
-              (local.get $normal_z)
-              (f64.const 1.0)
-            )
-          )
-        )
+    )
+
+    ;; hit detected: show object
+    ;; display's the circle's normals for now
+    ;; todo - replace with scattering calculations
+    (f64.mul
+      (f64.const 0.5)
+      (f64.add
+        (local.get $normal_x)
+        (f64.const 1.0)
+      )
+    )
+    (f64.mul
+      (f64.const 0.5)
+      (f64.add
+        (local.get $normal_y)
+        (f64.const 1.0)
+      )
+    )
+    (f64.mul
+      (f64.const 0.5)
+      (f64.add
+        (local.get $normal_z)
+        (f64.const 1.0)
       )
     )
   )
@@ -1983,9 +2012,302 @@
     (param $sphere_material_fuzz f64)
     (param $sphere_material_refraction_index f64)
 
-    (global.set $object_len
-      (global.get $object_len)
-      (global.get $object_size)
+    (local $new_memory_address i32)
+
+    (local.set $new_memory_address
+      (i32.add
+        (global.get $object_list_ptr)
+        (global.get $object_list_len)
+      )
+    )
+
+    (f64.store
+      offset=0
+      (local.get $new_memory_address)
+      (local.get $sphere_center_x)
+    )
+    (f64.store
+      offset=8
+      (local.get $new_memory_address)
+      (local.get $sphere_center_y)
+    )
+    (f64.store
+      offset=16
+      (local.get $new_memory_address)
+      (local.get $sphere_center_z)
+    )
+    (f64.store
+      offset=24
+      (local.get $new_memory_address)
+      (local.get $sphere_radius)
+    )
+    (i32.store
+      offset=32
+      (local.get $new_memory_address)
+      (local.get $sphere_material_type)
+    )
+    (f64.store
+      offset=36
+      (local.get $new_memory_address)
+      (local.get $sphere_material_albedo_r)
+    )
+    (f64.store
+      offset=44
+      (local.get $new_memory_address)
+      (local.get $sphere_material_albedo_g)
+    )
+    (f64.store
+      offset=52
+      (local.get $new_memory_address)
+      (local.get $sphere_material_albedo_b)
+    )
+    (f64.store
+      offset=60
+      (local.get $new_memory_address)
+      (local.get $sphere_material_fuzz)
+    )
+    (f64.store
+      offset=68
+      (local.get $new_memory_address)
+      (local.get $sphere_material_refraction_index)
+    )
+
+    ;; increment length of list
+    (global.set $object_list_len
+      (i32.add
+        (global.get $object_list_len)
+        (global.get $object_size)
+      )
+    )
+  )
+
+  ;; i = index of the object. 
+  ;; i.e. 0 = first object, 1 = 2nd object, etc.
+  (func $get_object_from_memory (param $i i32)
+    (result f64 f64 f64 f64 i32 f64 f64 f64 f64 f64)
+    (local $local_ptr i32)
+
+    ;; can't index from empty list
+    (if (i32.eqz (global.get $object_list_len))
+      (then
+        (unreachable)
+      )
+    )
+
+    (local.set $local_ptr
+      (i32.add 
+        (global.get $object_list_ptr)
+        (i32.mul
+          (local.get $i)
+          (global.get $object_size)
+        )
+      )
+    )
+
+    (f64.load
+      offset=0
+      (local.get $local_ptr)
+    )
+    (f64.load
+      offset=8
+      (local.get $local_ptr)
+    )
+    (f64.load
+      offset=16
+      (local.get $local_ptr)
+    )
+    (f64.load
+      offset=24
+      (local.get $local_ptr)
+    )
+    (i32.load
+      offset=32
+      (local.get $local_ptr)
+    )
+    (f64.load
+      offset=36
+      (local.get $local_ptr)
+    )
+    (f64.load
+      offset=44
+      (local.get $local_ptr)
+    )
+    (f64.load
+      offset=52
+      (local.get $local_ptr)
+    )
+    (f64.load
+      offset=60
+      (local.get $local_ptr)
+    )
+    (f64.load
+      offset=68
+      (local.get $local_ptr)
+    )
+  )
+
+  (func $test_extracting_info
+    (local $test_sphere_center_x f64)
+    (local $test_sphere_center_y f64)
+    (local $test_sphere_center_z f64)
+    (local $test_sphere_radius f64)
+    (local $test_sphere_material_type i32)
+    (local $test_sphere_material_albedo_r f64)
+    (local $test_sphere_material_albedo_g f64)
+    (local $test_sphere_material_albedo_b f64)
+    (local $test_sphere_material_fuzz f64)
+    (local $test_sphere_material_refraction_index f64)
+
+    
+    
+    (call $log_float 
+      (local.get $test_sphere_center_x)
+    )
+    (call $log_float 
+      (local.get $test_sphere_center_y)
+    )
+    (call $log_float 
+      (local.get $test_sphere_center_z)
+    )
+    (call $log_float 
+      (local.get $test_sphere_radius)
+    )
+    (call $log
+      (local.get $test_sphere_material_type)
+    )
+    (call $log_float 
+      (local.get $test_sphere_material_albedo_r)
+    )
+    (call $log_float 
+      (local.get $test_sphere_material_albedo_g)
+    )
+    (call $log_float 
+      (local.get $test_sphere_material_albedo_b)
+    )
+    (call $log_float 
+      (local.get $test_sphere_material_fuzz)
+    )
+    (call $log_float 
+      (local.get $test_sphere_material_refraction_index)
+    )
+    (call $log (i32.const 111111111))
+
+    (local.set $test_sphere_center_x
+      (local.set $test_sphere_center_y
+        (local.set $test_sphere_center_z
+          (local.set $test_sphere_radius
+            (local.set $test_sphere_material_type
+              (local.set $test_sphere_material_albedo_r
+                (local.set $test_sphere_material_albedo_g
+                  (local.set $test_sphere_material_albedo_b
+                    (local.set $test_sphere_material_fuzz
+                      (local.set $test_sphere_material_refraction_index
+                        (call $get_object_from_memory (i32.const 1))
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    
+    (call $log_float 
+      (local.get $test_sphere_center_x)
+    )
+    (call $log_float 
+      (local.get $test_sphere_center_y)
+    )
+    (call $log_float 
+      (local.get $test_sphere_center_z)
+    )
+    (call $log_float 
+      (local.get $test_sphere_radius)
+    )
+    (call $log
+      (local.get $test_sphere_material_type)
+    )
+    (call $log_float 
+      (local.get $test_sphere_material_albedo_r)
+    )
+    (call $log_float 
+      (local.get $test_sphere_material_albedo_g)
+    )
+    (call $log_float 
+      (local.get $test_sphere_material_albedo_b)
+    )
+    (call $log_float 
+      (local.get $test_sphere_material_fuzz)
+    )
+    (call $log_float 
+      (local.get $test_sphere_material_refraction_index)
+    )
+    (call $log (i32.const 111111111))
+  )
+
+  (func $generate_default_objects_in_world
+    ;; sphere data
+    (local $sphere_center_x f64)
+    (local $sphere_center_y f64)
+    (local $sphere_center_z f64)
+    (local $sphere_radius f64)
+    (local $sphere_material_type i32)
+    (local $sphere_material_albedo_r f64)
+    (local $sphere_material_albedo_g f64)
+    (local $sphere_material_albedo_b f64)
+    (local $sphere_material_fuzz f64)
+    (local $sphere_material_refraction_index f64)
+    
+    ;; circle in front
+    (local.set $sphere_center_x (f64.const 0.0))
+    (local.set $sphere_center_y (f64.const 0.0))
+    (local.set $sphere_center_z (f64.const -1.0))
+    (local.set $sphere_radius (f64.const 0.5))
+    (local.set $sphere_material_type (i32.const 0))
+    (local.set $sphere_material_albedo_r (f64.const 0.3))
+    (local.set $sphere_material_albedo_g (f64.const 0.3))
+    (local.set $sphere_material_albedo_b (f64.const 0.4))
+    (local.set $sphere_material_fuzz (f64.const 0.0))
+    (local.set $sphere_material_refraction_index (f64.const 0.0))
+
+    (call $add_object_to_world
+      (local.get $sphere_center_x)
+      (local.get $sphere_center_y)
+      (local.get $sphere_center_z)
+      (local.get $sphere_radius)
+      (local.get $sphere_material_type)
+      (local.get $sphere_material_albedo_r)
+      (local.get $sphere_material_albedo_g)
+      (local.get $sphere_material_albedo_b)
+      (local.get $sphere_material_fuzz)
+      (local.get $sphere_material_refraction_index)
+    )
+
+    ;; circle below (ground)
+    (local.set $sphere_center_x (f64.const 0.0))
+    (local.set $sphere_center_y (f64.const -100.5))
+    (local.set $sphere_center_z (f64.const -1.0))
+    (local.set $sphere_radius (f64.const 100.0))
+    (local.set $sphere_material_type (i32.const 1))
+    (local.set $sphere_material_albedo_r (f64.const 0.75))
+    (local.set $sphere_material_albedo_g (f64.const 0.6))
+    (local.set $sphere_material_albedo_b (f64.const 0.5))
+    (local.set $sphere_material_fuzz (f64.const 0.0))
+    (local.set $sphere_material_refraction_index (f64.const 0.0))
+
+    (call $add_object_to_world
+      (local.get $sphere_center_x)
+      (local.get $sphere_center_y)
+      (local.get $sphere_center_z)
+      (local.get $sphere_radius)
+      (local.get $sphere_material_type)
+      (local.get $sphere_material_albedo_r)
+      (local.get $sphere_material_albedo_g)
+      (local.get $sphere_material_albedo_b)
+      (local.get $sphere_material_fuzz)
+      (local.get $sphere_material_refraction_index)
     )
   )
 
@@ -2050,55 +2372,23 @@
     )
     (call $update_camera_values)
   )
-
+  
   ;; called on each tick to update all internal state
   (func (export "tick")
-    (call $render_to_internal_buffer)
+    ;; (call $render_to_internal_buffer)
+    (call $test_extracting_info)
   )
   
   (func (export "init") 
     (param $initial_canvas_width i32) 
     (param $initial_canvas_height i32)
 
-    ;; Sphere test data
-    (local $test_sphere_center_x f64)
-    (local $test_sphere_center_y f64)
-    (local $test_sphere_center_z f64)
-    (local $test_sphere_radius f64)
-    (local $test_sphere_material_type i32)
-    (local $test_sphere_material_albedo_r f64)
-    (local $test_sphere_material_albedo_g f64)
-    (local $test_sphere_material_albedo_b f64)
-    (local $test_sphere_material_fuzz f64)
-    (local $test_sphere_material_refraction_index f64)
-
-    (local.set $test_sphere_center_x (f64.const 0.0))
-    (local.set $test_sphere_center_y (f64.const 0.0))
-    (local.set $test_sphere_center_z (f64.const -1.0))
-    (local.set $test_sphere_radius (f64.const 0.5))
-    (local.set $test_sphere_material_type (i32.const 0))
-    (local.set $test_sphere_material_albedo_r (f64.const 0.3))
-    (local.set $test_sphere_material_albedo_g (f64.const 0.3))
-    (local.set $test_sphere_material_albedo_b (f64.const 0.4))
-    (local.set $test_sphere_material_fuzz (f64.const 0.0))
-    (local.set $test_sphere_material_refraction_index (f64.const 0.0))
+    (call $generate_default_objects_in_world)
 
     ;; synchronize window, canvas size, and camera state
     (call $sync_viewport 
       (local.get $initial_canvas_width) 
       (local.get $initial_canvas_height)
-    )
-    (call $add_object_to_world
-      (local.get $test_sphere_center_x)
-      (local.get $test_sphere_center_y)
-      (local.get $test_sphere_center_z)
-      (local.get $test_sphere_radius)
-      (local.get $test_sphere_material_type)
-      (local.get $test_sphere_material_albedo_r)
-      (local.get $test_sphere_material_albedo_g)
-      (local.get $test_sphere_material_albedo_b)
-      (local.get $test_sphere_material_fuzz)
-      (local.get $test_sphere_material_refraction_index)
     )
   )
 )
