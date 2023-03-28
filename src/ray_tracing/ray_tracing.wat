@@ -80,11 +80,17 @@
   ;; height in pixels--this also doubles as the camera_height
   (global $canvas_height (export "canvas_height") (mut i32) (i32.const 0))
 
+  (global $bytes_per_px (export "bytes_per_pixel") i32 (i32.const 4))
+
   ;; largest possible size the canvas can be in any one direction in pixels
   (global $max_dimension i32 (i32.const 100))
 
+  ;; "object" is any object in the scene (sphere, quad, etc.)
   (global $object_list_ptr i32 (i32.const 40000))
+
+  ;; size of each object element in memory
   (global $object_size i32 (i32.const 76))
+  
   ;; 1 index per object
   (global $object_list_len (mut i32) (i32.const 0))
 
@@ -94,78 +100,73 @@
   ;; if result matches this value, then perform nop
   (global $nop_flag i32 (i32.const -1))
 
-  (global $bytes_per_px (export "bytes_per_pixel") i32 (i32.const 4))
-
   ;; RENDERING CONSTANTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; (global $width f64 (f64.const 0))
-  ;; (global $height f64 (f64.const 0))
-  ;; (global $now f64 (f64.const 0))
   
   ;; should match width of canvas in pixels
-  (global $aperature (export "aperture") (mut f64) (f64.const 0.0))
+  (global $aperature (mut f64) (f64.const 0.0))
 
-  (global $focus_distance (export "focus_distance") (mut f64) (f64.const 0.75))
+  (global $focus_distance (mut f64) (f64.const 0.75))
 
-  (global $lens_radius (export "lens_radius") (mut f64) (f64.const 0.0))
+  (global $lens_radius (mut f64) (f64.const 0.0))
 
   ;; PI / 3.0 -- stored in radians
-  (global $camera_field_of_view (export "camera_field_of_view") (mut f64) (f64.const 1.0471975511965976))
+  (global $camera_field_of_view (mut f64) (f64.const 1.0471975511965976))
 
-  (global $camera_h (export "camera_h") (mut f64) (f64.const 0.0))
+  (global $camera_h (mut f64) (f64.const 0.0))
 
-  (global $focal_length (export "focal_length") (mut f64) (f64.const 1.0))
+  (global $focal_length (mut f64) (f64.const 1.0))
 
-  (global $pitch (export "pitch") (mut f64) (f64.const 0.0))
+  (global $pitch (mut f64) (f64.const 0.0))
 
   ;; look down the z-axis by default
-  (global $yaw (export "yaw") (mut f64) (f64.const -90.0))
+  (global $yaw (mut f64) (f64.const -90.0))
 
-  (global $vup_x (export "vup_x") (mut f64) (f64.const 0.0))
-  (global $vup_y (export "vup_y") (mut f64) (f64.const 1.0))
-  (global $vup_z (export "vup_z") (mut f64) (f64.const 0.0))
+  (global $vup_x (mut f64) (f64.const 0.0))
+  (global $vup_y (mut f64) (f64.const 1.0))
+  (global $vup_z (mut f64) (f64.const 0.0))
 
   ;; PI / 3.0 - stored in radians
-  (global $camera_origin_x (export "camera_origin_x") (mut f64) (f64.const 0.0))
-  (global $camera_origin_y (export "camera_origin_y") (mut f64) (f64.const 0.0))
-  (global $camera_origin_z (export "camera_origin_z") (mut f64) (f64.const 1.0))
+  (global $camera_origin_x (mut f64) (f64.const 0.0))
+  (global $camera_origin_y (mut f64) (f64.const 0.0))
+  (global $camera_origin_z (mut f64) (f64.const 1.0))
 
-  (global $aspect_ratio (export "aspect_ratio") (mut f64) (f64.const 0.0))
+  (global $aspect_ratio (mut f64) (f64.const 0.0))
 
-  (global $camera_front_x (export "camera_front_x") (mut f64) (f64.const 0.0))
-  (global $camera_front_y (export "camera_front_y") (mut f64) (f64.const 0.0))
-  (global $camera_front_z (export "camera_front_z") (mut f64) (f64.const 0.0))
+  (global $camera_front_x (mut f64) (f64.const 0.0))
+  (global $camera_front_y (mut f64) (f64.const 0.0))
+  (global $camera_front_z (mut f64) (f64.const 0.0))
 
-  (global $u_x (export "u_x") (mut f64) (f64.const 0.0))
-  (global $u_y (export "u_y") (mut f64) (f64.const 0.0))
-  (global $u_z (export "u_z") (mut f64) (f64.const 0.0))
+  (global $u_x (mut f64) (f64.const 0.0))
+  (global $u_y (mut f64) (f64.const 0.0))
+  (global $u_z (mut f64) (f64.const 0.0))
 
-  (global $v_x (export "v_x") (mut f64) (f64.const 0.0))
-  (global $v_y (export "v_y") (mut f64) (f64.const 0.0))
-  (global $v_z (export "v_z") (mut f64) (f64.const 0.0))
+  (global $v_x (mut f64) (f64.const 0.0))
+  (global $v_y (mut f64) (f64.const 0.0))
+  (global $v_z (mut f64) (f64.const 0.0))
   
-  (global $w_x (export "w_x") (mut f64) (f64.const 0.0))
-  (global $w_y (export "w_y") (mut f64) (f64.const 0.0))
-  (global $w_z (export "w_z") (mut f64) (f64.const 0.0))
+  (global $w_x (mut f64) (f64.const 0.0))
+  (global $w_y (mut f64) (f64.const 0.0))
+  (global $w_z (mut f64) (f64.const 0.0))
 
-  (global $sync_viewport_height (export "sync_viewport_height") (mut f64) (f64.const 0.0))
-  (global $sync_viewport_width (export "sync_viewport_width") (mut f64) (f64.const 0.0))
+  (global $sync_viewport_height (mut f64) (f64.const 0.0))
+  (global $sync_viewport_width (mut f64) (f64.const 0.0))
 
-  (global $horizontal_x (export "horizontal_x") (mut f64) (f64.const 0.0))
-  (global $horizontal_y (export "horizontal_y") (mut f64) (f64.const 0.0))
-  (global $horizontal_z (export "horizontal_z") (mut f64) (f64.const 0.0))
+  (global $horizontal_x (mut f64) (f64.const 0.0))
+  (global $horizontal_y (mut f64) (f64.const 0.0))
+  (global $horizontal_z (mut f64) (f64.const 0.0))
 
-  (global $vertical_x (export "vertical_x") (mut f64) (f64.const 0.0))
-  (global $vertical_y (export "vertical_y") (mut f64) (f64.const 0.0))
-  (global $vertical_z (export "vertical_z") (mut f64) (f64.const 0.0))
+  (global $vertical_x (mut f64) (f64.const 0.0))
+  (global $vertical_y (mut f64) (f64.const 0.0))
+  (global $vertical_z (mut f64) (f64.const 0.0))
 
-  (global $lower_left_corner_x (export "lower_left_corner_x") (mut f64) (f64.const 0.0))
-  (global $lower_left_corner_y (export "lower_left_corner_y") (mut f64) (f64.const 0.0))
-  (global $lower_left_corner_z (export "lower_left_corner_z") (mut f64) (f64.const 0.0))
+  (global $lower_left_corner_x (mut f64) (f64.const 0.0))
+  (global $lower_left_corner_y (mut f64) (f64.const 0.0))
+  (global $lower_left_corner_z (mut f64) (f64.const 0.0))
 
-  (global $look_at_x (export "look_at_x") (mut f64) (f64.const 1))
-  (global $look_at_y (export "look_at_y") (mut f64) (f64.const 1))
-  (global $look_at_z (export "look_at_z") (mut f64) (f64.const 1))
+  (global $look_at_x (mut f64) (f64.const 1))
+  (global $look_at_y (mut f64) (f64.const 1))
+  (global $look_at_z (mut f64) (f64.const 1))
 
   (global $min_t f64 (f64.const 0.001))
   (global $max_t f64 (f64.const 100000))
@@ -173,13 +174,18 @@
   (global $prev_now (mut f64) (f64.const 0.0))
   (global $now (mut f64) (f64.const 0.0))
 
-  (global $movement_speed (mut f64) (f64.const 0.001))
+  (global $movement_sensitivity (mut f64) (f64.const 0.001))
+  (global $look_sensitivity (mut f64) (f64.const 1.0))
 
-  ;; controls
-  (global $look_sensitivity (export "look_sensitivity") (mut f64) (f64.const 3.0))
+  ;; CONTROLS
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
   (global $left_stick_x_position (export "left_stick_x_position") (mut f64) (f64.const 0.0))
+
   (global $left_stick_y_position (export "left_stick_y_position") (mut f64) (f64.const 0.0))
+
   (global $right_stick_x_position (export "right_stick_x_position") (mut f64) (f64.const 0.0))
+
   (global $right_stick_y_position (export "right_stick_y_position") (mut f64) (f64.const 0.0))
 
   ;; INTERNAL FUNCTIONS
@@ -2364,7 +2370,7 @@
                   (global.get $camera_front_z)
                   (global.get $left_stick_y_position)
                 )
-                (global.get $movement_speed)
+                (global.get $movement_sensitivity)
               )
               (local.get $dt)
             )
@@ -2394,7 +2400,7 @@
                   )
                   (global.get $left_stick_x_position)
                 )
-                (global.get $movement_speed)
+                (global.get $movement_sensitivity)
               )
               (local.get $dt)
             )

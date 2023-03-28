@@ -219,8 +219,8 @@
 
           // y must be inverted to match wasm memory layout
           // (since web uses y=0 as being at the TOP of the window)
-          wasm[`${side}_stick_y_position`].value = -smallestY;
-          wasm[`${side}_stick_x_position`].value = smallestX;
+          wasm[`${side}_stick_y_position`].value = -py;
+          wasm[`${side}_stick_x_position`].value = px;
 
           thumbIndicator.style.setProperty(
             "transform",
