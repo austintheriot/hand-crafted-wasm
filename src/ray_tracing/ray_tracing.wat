@@ -2347,10 +2347,6 @@
         (return)
       )
     )
-
-    (call $log_float (global.get $camera_origin_x))
-    (call $log_float (global.get $camera_origin_y))
-    (call $log_float (global.get $camera_origin_z))
     
     ;; set y component
     (global.set $camera_origin_x
@@ -2406,10 +2402,6 @@
         )
       )
     )
-
-    (call $log_float (global.get $camera_origin_x))
-    (call $log_float (global.get $camera_origin_y))
-    (call $log_float (global.get $camera_origin_z))
   )
 
   ;; called on each tick to update all internal state

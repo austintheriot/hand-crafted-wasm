@@ -261,6 +261,49 @@
         );
         rightStickButton.addEventListener("click", (e) => e.preventDefault());
 
+        const keyDownState = {};
+        window.addEventListener("keydown", (e) => {
+          if (keyDownState[e.key]) return;
+
+          switch (e.key) {
+            case "w":
+              wasm.left_stick_y_position.value += 1.0;
+              break;
+            case "s":
+              wasm.left_stick_y_position.value -= 1.0;
+              break;
+            case "d":
+              wasm.left_stick_x_position.value += 1.0;
+              break;
+            case "a":
+              wasm.left_stick_x_position.value -= 1.0;
+              break;
+          }
+
+          keyDownState[e.key] = true;
+        });
+
+        window.addEventListener("keyup", (e) => {
+          if (!keyDownState[e.key]) return;
+
+          switch (e.key) {
+            case "w":
+              wasm.left_stick_y_position.value -= 1.0;
+              break;
+            case "s":
+              wasm.left_stick_y_position.value += 1.0;
+              break;
+            case "d":
+              wasm.left_stick_x_position.value -= 1.0;
+              break;
+            case "a":
+              wasm.left_stick_x_position.value += 1.0;
+              break;
+          }
+
+          keyDownState[e.key] = false;
+        });
+
         // animate
         (async function animate() {
           wasm.tick();
