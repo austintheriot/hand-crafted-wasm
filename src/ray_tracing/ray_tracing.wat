@@ -1590,6 +1590,33 @@
     (local $step i32)
     (local $i i32)
 
+    (local $attenuation_r f64)
+    (local $attenuation_g f64)
+    (local $attenuation_b f64)
+
+    (local $new_ray_origin_x f64)
+    (local $new_ray_origin_y f64)
+    (local $new_ray_origin_z f64)
+    (local $new_ray_direction_x f64)
+    (local $new_ray_direction_y f64)
+    (local $new_ray_direction_z f64)
+
+    (local $scattered_ray_origin_x f64)
+    (local $scattered_ray_origin_y f64)
+    (local $scattered_ray_origin_z f64)
+    (local $scattered_ray_direction_x f64)
+    (local $scattered_ray_direction_y f64)
+    (local $scattered_ray_direction_z f64)
+
+    (local $did_scatter i32)
+
+    (local.set $new_ray_origin_x (local.get $ray_origin_x))
+    (local.set $new_ray_origin_y (local.get $ray_origin_y))
+    (local.set $new_ray_origin_z (local.get $ray_origin_z))
+    (local.set $new_ray_direction_x (local.get $ray_direction_x))
+    (local.set $new_ray_direction_y (local.get $ray_direction_y))
+    (local.set $new_ray_direction_z (local.get $ray_direction_z))
+
     ;; set up loop for calculating colors from ray bounces
     (local.set $step (i32.const 1))
     (local.set $start_i (i32.const 0))
@@ -1624,12 +1651,12 @@
                                       (local.set $material_refraction_index
                                         (local.set $any_object_hit
                                           (call $hit_world
-                                            (local.get $ray_origin_x)
-                                            (local.get $ray_origin_y)
-                                            (local.get $ray_origin_z)
-                                            (local.get $ray_direction_x)
-                                            (local.get $ray_direction_y)
-                                            (local.get $ray_direction_z)
+                                            (local.get $new_ray_origin_x)
+                                            (local.get $new_ray_origin_y)
+                                            (local.get $new_ray_origin_z)
+                                            (local.get $new_ray_direction_x)
+                                            (local.get $new_ray_direction_y)
+                                            (local.get $new_ray_direction_z)
                                           )
                                         )
                                       )
@@ -1659,12 +1686,12 @@
                         (local.get $color_g)
                         (local.get $color_b)
                         (call $background
-                          (local.get $ray_origin_x)
-                          (local.get $ray_origin_y)
-                          (local.get $ray_origin_z)
-                          (local.get $ray_direction_x)
-                          (local.get $ray_direction_y)
-                          (local.get $ray_direction_z)
+                          (local.get $new_ray_origin_x)
+                          (local.get $new_ray_origin_y)
+                          (local.get $new_ray_origin_z)
+                          (local.get $new_ray_direction_x)
+                          (local.get $new_ray_direction_y)
+                          (local.get $new_ray_direction_z)
                         )
                       )
                     )
@@ -1679,6 +1706,91 @@
                 )
               )
             )
+
+            ;; there was a hit
+            (local.set $attenuation_r
+              (local.set $attenuation_g
+                (local.set $attenuation_b
+                  (local.set $scattered_ray_origin_x
+                    (local.set $scattered_ray_origin_y
+                      (local.set $scattered_ray_origin_z
+                        (local.set $scattered_ray_direction_x
+                          (local.set $scattered_ray_direction_y
+                            (local.set $scattered_ray_direction_z
+                              (local.set $did_scatter
+                                (call $scatter
+                                  ;; ray data
+                                  (local.get $new_ray_origin_x)
+                                  (local.get $new_ray_origin_y)
+                                  (local.get $new_ray_origin_z)
+                                  (local.get $new_ray_direction_x)
+                                  (local.get $new_ray_direction_y)
+                                  (local.get $new_ray_direction_z)
+                                
+                                  ;; HitRecord data
+                                  (local.get $hit_point_x)
+                                  (local.get $hit_point_y)
+                                  (local.get $hit_point_z)
+                                  (local.get $hit_t)
+                                  (local.get $normal_x)
+                                  (local.get $normal_y)
+                                  (local.get $normal_z)
+                                  (local.get $front_face)
+                                  (local.get $material_type)
+                                  (local.get $material_albedo_r)
+                                  (local.get $material_albedo_g)
+                                  (local.get $material_albedo_b)
+                                  (local.get $material_fuzz)
+                                  (local.get $material_refraction_index)
+                                )
+                              )
+                            )
+                          )
+                        )          
+                      )
+                    )
+                  )
+                )   
+              )
+            )
+            
+            (if (local.get $did_scatter)
+              (then
+                (local.set $new_ray_origin_x (local.get $scattered_ray_origin_x))
+                (local.set $new_ray_origin_y (local.get $scattered_ray_origin_y))
+                (local.set $new_ray_origin_z (local.get $scattered_ray_origin_z))
+                (local.set $new_ray_direction_x (local.get $scattered_ray_direction_x))
+                (local.set $new_ray_direction_y (local.get $scattered_ray_direction_y))
+                (local.set $new_ray_direction_z (local.get $scattered_ray_direction_z))
+
+                (local.set $color_r
+                  (local.set $color_g
+                    (local.set $color_b
+                      (call $vec_mul_vec
+                        (local.get $color_r)
+                        (local.get $color_g)
+                        (local.get $color_b)
+                        (local.get $attenuation_r)
+                        (local.get $attenuation_g)
+                        (local.get $attenuation_b)
+                      )
+                    )
+                  )
+                )
+              )
+              (else 
+                (return
+                  (f64.const 0.0)
+                  (f64.const 0.0)
+                  (f64.const 0.0)
+                )
+              )
+            )
+            
+            
+            
+
+           
             
             (local.set $i (i32.add (local.get $i) (local.get $step)))
             (br $bounce_loop)
