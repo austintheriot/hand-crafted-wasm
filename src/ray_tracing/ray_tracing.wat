@@ -101,6 +101,8 @@
   ;; if result matches this value, then perform nop
   (global $nop_flag i32 (i32.const -1))
 
+  (global $PI_TIMES_2 f64 (f64.const 6.283185307))
+
   ;; RENDERING CONSTANTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   
@@ -168,6 +170,9 @@
   (global $look_at_x (mut f64) (f64.const 1))
   (global $look_at_y (mut f64) (f64.const 1))
   (global $look_at_z (mut f64) (f64.const 1))
+
+  ;; number of times a ray can "bounce"
+  (global $max_depth (mut i32) (i32.const 5))
 
   (global $min_t f64 (f64.const 0.001))
   (global $max_t f64 (f64.const 100000))
@@ -445,6 +450,23 @@
     )
     (f64.mul
       (local.get $z)
+      (local.get $constant)
+    )
+  )
+
+  ;; multiplies a 2d vector times a constant
+  (func $vec2_mul_constant 
+    (param $x f64)
+    (param $y f64)
+    (param $constant f64)
+    (result f64 f64)
+
+    (f64.mul
+      (local.get $x)
+      (local.get $constant)
+    )
+    (f64.mul
+      (local.get $y)
       (local.get $constant)
     )
   )
@@ -1105,7 +1127,7 @@
     ;;     )
     ;;   )
     ;; )
-    
+
     (local.set $out_normal_x
       (local.get $outward_normal_x)
     )
@@ -1369,6 +1391,166 @@
     (local.get $any_object_hit)
   )
 
+  (func $random_in_unit_sphere
+    ;; no idea how this algorithm works, but it works much better than the one I was using.
+    ;; From reinder https://www.shadertoy.com/view/llVcDz
+    (result f64 f64 f64)
+    
+    (local $h_x f64)
+    (local $h_y f64)
+    (local $h_z f64)
+    (local $phi f64)
+    (local $r f64)
+    (local $x f64)
+    (local $y f64)
+    (local $z f64)
+
+    (local.set $h_x
+      (local.set $h_y
+        (local.set $h_z
+          (call $vec_sub_vec
+            (call $vec_mul_vec
+              (call $random)
+              (call $random)
+              (call $random)
+              (f64.const 2.0)
+              (global.get $PI_TIMES_2)
+              (f64.const 1.0)
+            )
+            (f64.const 1.0)
+            (f64.const 0.0)
+            (f64.const 0.0)
+          )
+        )
+      )
+    )
+
+    (local.set $phi (local.get $h_y))
+
+    (local.set $r
+      (call $pow
+        (local.get $h_z)
+        (f64.const 0.333333333)
+      )
+    )
+
+    (local.set $x
+      (local.set $y
+        (local.set $z
+          (call $vec2_mul_constant
+            (call $sin (local.get $phi))
+            (call $cos (local.get $phi))
+            (f64.sqrt
+              (f64.sub
+                (f64.const 1.0)
+                (f64.mul
+                  (local.get $x)
+                  (local.get $x)
+                )
+              )
+            )
+          )
+          (local.get $h_x)
+        )
+      )
+    )
+
+    (local.get $x)
+    (local.get $y)
+    (local.get $z)
+  ) 
+
+  (func $random_unit_vec
+    (result f64 f64 f64)
+    
+    (call $vec_normalize
+      (call $random_in_unit_sphere)
+    )
+  )
+
+  (func $scatter
+    ;; ray data
+    (param $ray_origin_x f64)
+    (param $ray_origin_y f64)
+    (param $ray_origin_z f64)
+    (param $ray_direction_x f64)
+    (param $ray_direction_y f64)
+    (param $ray_direction_z f64)
+  
+    ;; HitRecord data
+    (param $hit_point_x f64)
+    (param $hit_point_y f64)
+    (param $hit_point_z f64)
+    (param $hit_t f64)
+    (param $normal_x f64)
+    (param $normal_y f64)
+    (param $normal_z f64)
+    (param $front_face i32)
+    (param $material_type i32)
+    (param $material_albedo_r f64)
+    (param $material_albedo_g f64)
+    (param $material_albedo_b f64)
+    (param $material_fuzz f64)
+    (param $material_refraction_index f64)
+    (result 
+      ;; attenuation
+      f64 f64 f64
+      ;; scattered ray
+      f64 f64 f64 f64 f64 f64
+      ;; reflected out
+      i32
+    )
+
+    (local $attenuation_r f64)
+    (local $attenuation_g f64)
+    (local $attenuation_b f64)
+
+    (local $scattered_ray_direction_x f64)
+    (local $scattered_ray_direction_y f64)
+    (local $scattered_ray_direction_z f64)
+
+    (local $reflected_out i32)
+
+    ;; for now, assume all materials are diffuse
+    (if (i32.const 1)
+      (then
+        (local.set $reflected_out (i32.const 1))
+
+        ;; assume diffuse scattering
+        (local.set $attenuation_r (local.get $material_albedo_r))
+        (local.set $attenuation_g (local.get $material_albedo_g))
+        (local.set $attenuation_b (local.get $material_albedo_b))
+
+        ;; generate random scatter direction for the bounced ray
+        (local.set $scattered_ray_direction_x
+          (local.set $scattered_ray_direction_y
+            (local.set $scattered_ray_direction_z
+              (call $vec_add_vec
+                (local.get $normal_x)
+                (local.get $normal_y)
+                (local.get $normal_z)
+                (call $random_unit_vec)
+              )
+            )
+          )
+        )
+      )
+    )
+
+    
+
+    (local.get $attenuation_r)
+    (local.get $attenuation_g)
+    (local.get $attenuation_b)
+    (local.get $ray_origin_x)
+    (local.get $ray_origin_y)
+    (local.get $ray_origin_z)
+    (local.get $scattered_ray_direction_x)
+    (local.get $scattered_ray_direction_y)
+    (local.get $scattered_ray_direction_z)
+    (local.get $reflected_out)
+  )
+
   ;; accepts ray and returns the color that ray should be
   ;; in rgb of range 0->1
   (func $ray_color
@@ -1402,33 +1584,56 @@
 
     (local $any_object_hit i32)
 
+    ;; loop data for "bouncing" the ray
+    (local $start_i i32) 
+    (local $end_i i32) 
+    (local $step i32)
+    (local $i i32)
+
+    ;; set up loop for calculating colors from ray bounces
+    (local.set $step (i32.const 1))
+    (local.set $start_i (i32.const 0))
+    (local.set $end_i (global.get $max_depth))
+
     ;; each ray starts out at full brightness
     (local.set $color_r (f64.const 1.0))
     (local.set $color_g (f64.const 1.0))
     (local.set $color_b (f64.const 1.0))
 
-    (local.set $hit_point_x
-      (local.set $hit_point_y
-        (local.set $hit_point_z
-          (local.set $hit_t
-            (local.set $normal_x
-              (local.set $normal_y
-                (local.set $normal_z
-                  (local.set $front_face
-                    (local.set $material_type
-                      (local.set $material_albedo_r
-                        (local.set $material_albedo_g
-                          (local.set $material_albedo_b
-                            (local.set $material_fuzz
-                              (local.set $material_refraction_index
-                                (local.set $any_object_hit
-                                  (call $hit_world
-                                    (local.get $ray_origin_x)
-                                    (local.get $ray_origin_y)
-                                    (local.get $ray_origin_z)
-                                    (local.get $ray_direction_x)
-                                    (local.get $ray_direction_y)
-                                    (local.get $ray_direction_z)
+    ;; outer loop - x coords
+    (local.set $i (local.get $start_i))
+    (block $bounce_loop_block
+      (loop $bounce_loop
+        (if (i32.lt_s (local.get $i) (local.get $end_i))
+
+          ;; calculate hit point with world
+          (then
+            (local.set $hit_point_x
+              (local.set $hit_point_y
+                (local.set $hit_point_z
+                  (local.set $hit_t
+                    (local.set $normal_x
+                      (local.set $normal_y
+                        (local.set $normal_z
+                          (local.set $front_face
+                            (local.set $material_type
+                              (local.set $material_albedo_r
+                                (local.set $material_albedo_g
+                                  (local.set $material_albedo_b
+                                    (local.set $material_fuzz
+                                      (local.set $material_refraction_index
+                                        (local.set $any_object_hit
+                                          (call $hit_world
+                                            (local.get $ray_origin_x)
+                                            (local.get $ray_origin_y)
+                                            (local.get $ray_origin_z)
+                                            (local.get $ray_direction_x)
+                                            (local.get $ray_direction_y)
+                                            (local.get $ray_direction_z)
+                                          )
+                                        )
+                                      )
+                                    )
                                   )
                                 )
                               )
@@ -1441,43 +1646,53 @@
                 )
               )
             )
+
+            (if (i32.eqz (local.get $any_object_hit))
+              ;; no hit detected: show background
+              (then 
+                ;; no hit, return sky background gradient
+                (local.set $color_r
+                  (local.set $color_g
+                    (local.set $color_b
+                      (call $vec_mul_vec
+                        (local.get $color_r)
+                        (local.get $color_g)
+                        (local.get $color_b)
+                        (call $background
+                          (local.get $ray_origin_x)
+                          (local.get $ray_origin_y)
+                          (local.get $ray_origin_z)
+                          (local.get $ray_direction_x)
+                          (local.get $ray_direction_y)
+                          (local.get $ray_direction_z)
+                        )
+                      )
+                    )
+                  )
+                )
+                
+                ;; return early
+                (return
+                  (local.get $color_r)
+                  (local.get $color_g)
+                  (local.get $color_b)
+                )
+              )
+            )
+            
+            (local.set $i (i32.add (local.get $i) (local.get $step)))
+            (br $bounce_loop)
+          )
+          (else 
+            (br $bounce_loop_block)
           )
         )
       )
     )
 
-    (if (i32.eqz (local.get $any_object_hit))
-      ;; no hit detected: show background
-      (then 
-        ;; no hit, return sky background gradient
-        (local.set $color_r
-          (local.set $color_g
-            (local.set $color_b
-              (call $vec_mul_vec
-                (local.get $color_r)
-                (local.get $color_g)
-                (local.get $color_b)
-                (call $background
-                  (local.get $ray_origin_x)
-                  (local.get $ray_origin_y)
-                  (local.get $ray_origin_z)
-                  (local.get $ray_direction_x)
-                  (local.get $ray_direction_y)
-                  (local.get $ray_direction_z)
-                )
-              )
-            )
-          )
-        )
-        
-        ;; return early
-        (return
-          (local.get $color_r)
-          (local.get $color_g)
-          (local.get $color_b)
-        )
-      )
-    )
+    
+
+    
 
     ;; hit detected: show object
     ;; display's the circle's normals for now
