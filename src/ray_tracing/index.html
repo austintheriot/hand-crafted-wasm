@@ -304,8 +304,17 @@
           keyDownState[e.key] = false;
         });
 
+        const TOTAL_ITERATIONS = Infinity;
+        let currentIteration = 0;
+
         // animate
         (async function animate() {
+          if (currentIteration >= TOTAL_ITERATIONS) {
+            return;
+          } else {
+            currentIteration += 1;
+          }
+          
           wasm.tick();
           render();
           requestAnimationFrame(animate);

@@ -57,6 +57,7 @@
   (import "console" "log" (func $log_4 (param i32) (param i32) (param i32) (param i32)))
   (import "console" "log" (func $log_float (param f64)))
   (import "console" "log" (func $log_float_2 (param f64) (param f64)))
+  (import "console" "log" (func $log_float_3 (param f64) (param f64) (param f64)))
   (import "console" "log" (func $log_float_6 (param f64) (param f64) (param f64) (param f64) (param f64) (param f64)))
   (import "error" "throw" (func $throw (param i32)))
   (import "Date" "now" (func $now (result f64)))
@@ -201,29 +202,29 @@
     )
   )
 
-  (func $vec_len_squared (param $x f64) (param $y f64) (param $z f64) (result f64)
-    (f64.add
+  (func $vec_len (param $x f64) (param $y f64) (param $z f64) (result f64)
+    (f64.sqrt
       (f64.add
-        (call $pow 
-          (local.get $x)
-          (f64.const 2.0)
+        (f64.add
+          (call $pow 
+            (local.get $x)
+            (f64.const 2.0)
+          )
+          (call $pow 
+            (local.get $y)
+            (f64.const 2.0)
+          )
         )
         (call $pow 
-          (local.get $y)
+          (local.get $z)
           (f64.const 2.0)
         )
-      )
-      (call $pow 
-        (local.get $z)
-        (f64.const 2.0)
       )
     )
   )
 
-  (func $vec_len (param $x f64) (param $y f64) (param $z f64) (result f64)
-    (f64.sqrt
-      (call $vec_len_squared (local.get $x) (local.get $y) (local.get $z))
-    )
+  (func $vec_len_squared (param $x f64) (param $y f64) (param $z f64) (result f64)
+    (call $pow (call $vec_len (local.get $x) (local.get $y) (local.get $z)) (f64.const 2.0))
   )
 
   ;; $component refers to which item in the vec to get the value back from
@@ -242,11 +243,6 @@
     (f64.div (local.get $x) (local.get $length))
     (f64.div (local.get $y) (local.get $length))
     (f64.div (local.get $z) (local.get $length)) 
-  )
-
-  ;; normalize one component when length is already known
-  (func $vec_normalize_with_length (param $xyz f64) (param $length f64) (result f64)
-    (f64.div (local.get $xyz) (local.get $length))
   )
 
   ;; $component refers to which item in the vec to get the value back from
@@ -388,7 +384,13 @@
   )
 
   ;; adds a constant to a vector
-  (func $vec_add_constant (param $x f64) (param $y f64) (param $z f64) (param $constant f64) (result f64 f64 f64)
+  (func $vec_add_constant 
+    (param $x f64) 
+    (param $y f64) 
+    (param $z f64) 
+    (param $constant f64) 
+    (result f64 f64 f64)
+
     (f64.add
       (local.get $x)
       (local.get $constant)
@@ -404,23 +406,35 @@
   )
 
   ;; divides a vector by a constant
-  (func $vec_div_constant (param $x f64) (param $y f64) (param $z f64) (param $constant f64) (result f64 f64 f64)
-    (f64.sub
+  (func $vec_div_constant 
+    (param $x f64)
+    (param $y f64)
+    (param $z f64)
+    (param $constant f64)
+    (result f64 f64 f64)
+
+    (f64.div
       (local.get $x)
       (local.get $constant)
     )
-    (f64.sub
+    (f64.div
       (local.get $y)
       (local.get $constant)
     )
-    (f64.sub
+    (f64.div
       (local.get $z)
       (local.get $constant)
     )
   )
 
   ;; multiplies a vector times a constant
-  (func $vec_mul_constant (param $x f64) (param $y f64) (param $z f64) (param $constant f64) (result f64 f64 f64)
+  (func $vec_mul_constant 
+    (param $x f64)
+    (param $y f64)
+    (param $z f64)
+    (param $constant f64)
+    (result f64 f64 f64)
+
     (f64.mul
       (local.get $x)
       (local.get $constant)
@@ -436,7 +450,13 @@
   )
 
   ;; subtracts a constant from a vector
-  (func $vec_sub_constant (param $x f64) (param $y f64) (param $z f64) (param $constant f64) (result f64 f64 f64)
+  (func $vec_sub_constant 
+    (param $x f64)
+    (param $y f64)
+    (param $z f64)
+    (param $constant f64)
+    (result f64 f64 f64)
+
     (f64.sub
       (local.get $x)
       (local.get $constant)
@@ -728,16 +748,17 @@
     (param $hit_t f64)
     (result f64 f64 f64)
     
-    (call $vec_mul_constant
-      (call $vec_add_vec
-        (local.get $ray_origin_x)
-        (local.get $ray_origin_y)
-        (local.get $ray_origin_z)
+    
+    (call $vec_add_vec
+      (local.get $ray_origin_x)
+      (local.get $ray_origin_y)
+      (local.get $ray_origin_z)
+      (call $vec_mul_constant
         (local.get $ray_direction_x)
         (local.get $ray_direction_y)
         (local.get $ray_direction_z)
+        (local.get $hit_t)
       )
-      (local.get $hit_t)
     )
   )
 
@@ -811,7 +832,7 @@
     (local $a f64)
     (local $half_b f64)
     (local $c f64)
-    (local $disctriminant f64)
+    (local $discriminant f64)
     (local $sqrtd f64)
     (local $root f64)
     (local $outward_normal_x f64)
@@ -883,7 +904,7 @@
       )
     )
 
-    (local.set $disctriminant
+    (local.set $discriminant
       (f64.sub
         (call $pow
           (local.get $half_b)
@@ -896,158 +917,203 @@
       )
     )
 
-    (block $determine_hit
-      (if (f64.lt (local.get $disctriminant) (f64.const 0.0))
-        (then
+    (if (f64.lt (local.get $discriminant) (f64.const 0.0))
+      (then
+        (return
           ;; no hit
-          (local.set $hit_object (i32.const 0))
-          (br $determine_hit)
+          ;; return the HitRecord data
+          (local.get $out_hit_point_x)
+          (local.get $out_hit_point_y)
+          (local.get $out_hit_point_z)
+          (local.get $out_hit_t)
+          (local.get $out_normal_x)
+          (local.get $out_normal_y)
+          (local.get $out_normal_z)
+          (local.get $out_front_face)
+          (local.get $out_material_type)
+          (local.get $out_material_albedo_r)
+          (local.get $out_material_albedo_g)
+          (local.get $out_material_albedo_b)
+          (local.get $out_material_fuzz)
+          (local.get $out_material_refraction_index)
+          
+          ;; return on top of stack for checking if there was a hit
+          ;; beore assigning the rest of the variables
+          (i32.const 0)
         )
       )
+    )
 
-      ;; there was a hit--determine whether it was within an acceptable range
-      (local.set $sqrtd
-        (f64.sqrt
-          (local.get $disctriminant)
-        )
+    ;; there was a hit--determine whether it was within an acceptable range
+    (local.set $sqrtd
+      (f64.sqrt
+        (local.get $discriminant)
       )
-      (local.set $root
-        (f64.div
-          (f64.sub
-            (f64.neg 
-              (local.get $half_b)
-            )
-            (local.get $sqrtd)
+    )
+    (local.set $root
+      (f64.div
+        (f64.sub
+          (f64.neg 
+            (local.get $half_b)
           )
-          (local.get $a)
+          (local.get $sqrtd)
         )
+        (local.get $a)
       )
-      (if (i32.or
-            (f64.lt
-              (local.get $root)
-              (global.get $min_t)
-            )
-            (f64.lt
-              (local.get $max_t_local)
-              (local.get $root)
-            )
+    )
+    (if (i32.or
+          (f64.lt
+            (local.get $root)
+            (global.get $min_t)
           )
-        (then
-          (local.set $root
-            (f64.div
-              (f64.add
-                (f64.neg 
-                  (local.get $half_b)
-                )
-                (local.get $sqrtd)
+          (f64.lt
+            (local.get $max_t_local)
+            (local.get $root)
+          )
+        )
+      (then
+        (local.set $root
+          (f64.div
+            (f64.add
+              (f64.neg 
+                (local.get $half_b)
               )
-              (local.get $a)
+              (local.get $sqrtd)
             )
-          )
-          (if (i32.or
-                (f64.lt
-                  (local.get $root)
-                  (global.get $min_t)
-                )
-                (f64.lt
-                  (local.get $max_t_local)
-                  (local.get $root)
-                )
-              )
-            (then
-              ;; there was a hit, but it was out of range
-              (local.set $hit_object (i32.const 0))
-              (br $determine_hit)
-            )
+            (local.get $a)
           )
         )
-
-        ;; if no other branches were met, then we know we 
-        ;; have a valid hit on this object
-        (local.set $hit_object (i32.const 1))
-      )
-
-      ;; only bother setting these if there was a legitimate hit
-      ;; copy sphere material data into HitRecord
-      (local.set $out_material_type (local.get $sphere_material_type))
-      (local.set $out_material_albedo_r (local.get $sphere_material_albedo_r))
-      (local.set $out_material_albedo_g (local.get $sphere_material_albedo_g))
-      (local.set $out_material_albedo_b (local.get $sphere_material_albedo_b))
-      (local.set $out_material_fuzz (local.get $sphere_material_fuzz))
-      (local.set $out_material_refraction_index (local.get $sphere_material_refraction_index))
-      
-      ;; determine hit location, normal data, etc.
-      (local.set $out_hit_t (local.get $root))
-      (local.set $out_hit_point_x 
-        (local.set $out_hit_point_y
-          (local.set $out_hit_point_z
-            (call $ray_at
-              (local.get $ray_origin_x)
-              (local.get $ray_origin_y)
-              (local.get $ray_origin_z)
-              (local.get $ray_direction_x)
-              (local.get $ray_direction_y)
-              (local.get $ray_direction_z)
+        (if (i32.or
+              (f64.lt
+                (local.get $root)
+                (global.get $min_t)
+              )
+              (f64.lt
+                (local.get $max_t_local)
+                (local.get $root)
+              )
+            )
+          (then
+            ;; there was a hit, but it was out of range
+            (return
+              ;; no hit
+              ;; return the HitRecord data
+              (local.get $out_hit_point_x)
+              (local.get $out_hit_point_y)
+              (local.get $out_hit_point_z)
               (local.get $out_hit_t)
+              (local.get $out_normal_x)
+              (local.get $out_normal_y)
+              (local.get $out_normal_z)
+              (local.get $out_front_face)
+              (local.get $out_material_type)
+              (local.get $out_material_albedo_r)
+              (local.get $out_material_albedo_g)
+              (local.get $out_material_albedo_b)
+              (local.get $out_material_fuzz)
+              (local.get $out_material_refraction_index)
+              
+              ;; return on top of stack for checking if there was a hit
+              ;; beore assigning the rest of the variables
+              (i32.const 0)
             )
           )
         )
       )
-      (local.set $outward_normal_x
-        (local.set $outward_normal_y
-          (local.set $outward_normal_z
-            (call $vec_div_constant
-              (call $vec_sub_vec
-                (local.get $out_hit_point_x)
-                (local.get $out_hit_point_y)
-                (local.get $out_hit_point_z)
-                (local.get $sphere_center_x)
-                (local.get $sphere_center_y)
-                (local.get $sphere_center_z)
-              )
-              (local.get $sphere_radius)
-            )
-          )
-        )
-      )
-      (local.set $out_front_face
-        (f64.lt
-          (call $vec_dot
+    )
+
+    ;; only bother setting these if there was a legitimate hit
+    ;; copy sphere material data into HitRecord
+    (local.set $out_material_type (local.get $sphere_material_type))
+    (local.set $out_material_albedo_r (local.get $sphere_material_albedo_r))
+    (local.set $out_material_albedo_g (local.get $sphere_material_albedo_g))
+    (local.set $out_material_albedo_b (local.get $sphere_material_albedo_b))
+    (local.set $out_material_fuzz (local.get $sphere_material_fuzz))
+    (local.set $out_material_refraction_index (local.get $sphere_material_refraction_index))
+    (local.set $out_hit_t (local.get $root))
+    (local.set $out_hit_point_x 
+      (local.set $out_hit_point_y
+        (local.set $out_hit_point_z
+          (call $ray_at
+            (local.get $ray_origin_x)
+            (local.get $ray_origin_y)
+            (local.get $ray_origin_z)
             (local.get $ray_direction_x)
             (local.get $ray_direction_y)
             (local.get $ray_direction_z)
-            (local.get $outward_normal_x)
-            (local.get $outward_normal_y)
-            (local.get $outward_normal_z)
+            (local.get $out_hit_t)
           )
-          (f64.const 0.0)
         )
       )
+    )
+    (local.set $outward_normal_x
+      (local.set $outward_normal_y
+        (local.set $outward_normal_z
+          (call $vec_div_constant
+            (call $vec_sub_vec
+              (local.get $out_hit_point_x)
+              (local.get $out_hit_point_y)
+              (local.get $out_hit_point_z)
+              (local.get $sphere_center_x)
+              (local.get $sphere_center_y)
+              (local.get $sphere_center_z)
+            )
+            (local.get $sphere_radius)
+          )
+        )
+      )
+    )
 
-      (if (local.get $out_front_face) 
-        (then
-          (local.set $out_normal_x
-            (local.get $outward_normal_x)
-          )
-          (local.set $out_normal_y
-            (local.get $outward_normal_y)
-          )
-          (local.set $out_normal_z 
-            (local.get $outward_normal_z)
-          )
-        )
-        (else 
-          (local.set $out_normal_x
-            (f64.neg (local.get $outward_normal_x))
-          )
-          (local.set $out_normal_y
-            (f64.neg (local.get $outward_normal_y))
-          )
-          (local.set $out_normal_z 
-            (f64.neg (local.get $outward_normal_z))
-          )
-        )
-      )
+    ;; ;; todo: reinstate this logic for calculating
+    ;; ;; whether a normal is inside or outside the sphere
+    ;; ;; (haven't been able to resolve bug where normals are
+    ;; ;; inverted for some reason)
+    ;; (local.set $out_front_face
+    ;;   (f64.lt
+    ;;     (call $vec_dot
+    ;;       (local.get $ray_direction_x)
+    ;;       (local.get $ray_direction_y)
+    ;;       (local.get $ray_direction_z)
+    ;;       (local.get $outward_normal_x)
+    ;;       (local.get $outward_normal_y)
+    ;;       (local.get $outward_normal_z)
+    ;;     )
+    ;;     (f64.const 0.0)
+    ;;   )
+    ;;   (if (local.get $out_front_face) 
+    ;;     (then
+    ;;       (local.set $out_normal_x
+    ;;         (local.get $outward_normal_x)
+    ;;       )
+    ;;       (local.set $out_normal_y
+    ;;         (local.get $outward_normal_y)
+    ;;       )
+    ;;       (local.set $out_normal_z 
+    ;;         (local.get $outward_normal_z)
+    ;;       )
+    ;;     )
+    ;;     (else 
+    ;;       (local.set $out_normal_x
+    ;;         (f64.neg (local.get $outward_normal_x))
+    ;;       )
+    ;;       (local.set $out_normal_y
+    ;;         (f64.neg (local.get $outward_normal_y))
+    ;;       )
+    ;;       (local.set $out_normal_z 
+    ;;         (f64.neg (local.get $outward_normal_z))
+    ;;       )
+    ;;     )
+    ;;   )
+    ;; )
+    
+    (local.set $out_normal_x
+      (local.get $outward_normal_x)
+    )
+    (local.set $out_normal_y
+      (local.get $outward_normal_y)
+    )
+    (local.set $out_normal_z 
+      (local.get $outward_normal_z)
     )
 
     ;; return the HitRecord data
@@ -1068,7 +1134,7 @@
     
     ;; return on top of stack for checking if there was a hit
     ;; beore assigning the rest of the variables
-    (local.get $hit_object)
+    (i32.const 1)
   )
 
   ;; returns HitRecord
@@ -1084,20 +1150,35 @@
     (result f64 f64 f64 f64 f64 f64 f64 i32 i32 f64 f64 f64 f64 f64 i32)
 
     ;; single HitRecord local data
-    (local $hit_point_x f64)
-    (local $hit_point_y f64)
-    (local $hit_point_z f64)
-    (local $hit_t f64)
-    (local $normal_x f64)
-    (local $normal_y f64)
-    (local $normal_z f64)
-    (local $front_face i32)
-    (local $material_type i32)
-    (local $material_albedo_r f64)
-    (local $material_albedo_g f64)
-    (local $material_albedo_b f64)
-    (local $material_fuzz f64)
-    (local $material_refraction_index f64)
+    (local $temp_hit_point_x f64)
+    (local $temp_hit_point_y f64)
+    (local $temp_hit_point_z f64)
+    (local $temp_hit_t f64)
+    (local $temp_normal_x f64)
+    (local $temp_normal_y f64)
+    (local $temp_normal_z f64)
+    (local $temp_front_face i32)
+    (local $temp_material_type i32)
+    (local $temp_material_albedo_r f64)
+    (local $temp_material_albedo_g f64)
+    (local $temp_material_albedo_b f64)
+    (local $temp_material_fuzz f64)
+    (local $temp_material_refraction_index f64)
+
+    (local $out_hit_point_x f64)
+    (local $out_hit_point_y f64)
+    (local $out_hit_point_z f64)
+    (local $out_hit_t f64)
+    (local $out_normal_x f64)
+    (local $out_normal_y f64)
+    (local $out_normal_z f64)
+    (local $out_front_face i32)
+    (local $out_material_type i32)
+    (local $out_material_albedo_r f64)
+    (local $out_material_albedo_g f64)
+    (local $out_material_albedo_b f64)
+    (local $out_material_fuzz f64)
+    (local $out_material_refraction_index f64)
 
     ;; Sphere data that will be loaded from memory
     (local $sphere_center_x f64)
@@ -1142,21 +1223,18 @@
       (loop $inner_loop
         (if (i32.lt_s (local.get $i) (local.get $end_i))
           (then
-
-            (block $check_sphere_hit
-              ;; load sphere data afrom memory
-              (local.set $sphere_center_x
-                (local.set $sphere_center_y
-                  (local.set $sphere_center_z
-                    (local.set $sphere_radius
-                      (local.set $sphere_material_type
-                        (local.set $sphere_material_albedo_r
-                          (local.set $sphere_material_albedo_g
-                            (local.set $sphere_material_albedo_b
-                              (local.set $sphere_material_fuzz
-                                (local.set $sphere_material_refraction_index
-                                  (call $get_object_from_memory (local.get $i))
-                                )
+            ;; load sphere data afrom memory
+            (local.set $sphere_center_x
+              (local.set $sphere_center_y
+                (local.set $sphere_center_z
+                  (local.set $sphere_radius
+                    (local.set $sphere_material_type
+                      (local.set $sphere_material_albedo_r
+                        (local.set $sphere_material_albedo_g
+                          (local.set $sphere_material_albedo_b
+                            (local.set $sphere_material_fuzz
+                              (local.set $sphere_material_refraction_index
+                                (call $get_object_from_memory (local.get $i))
                               )
                             )
                           )
@@ -1166,72 +1244,63 @@
                   )
                 )
               )
+            )
 
-              (call $hit_sphere
-                ;; Sphere data
-                (local.get $sphere_center_x)
-                (local.get $sphere_center_y)
-                (local.get $sphere_center_z)
-                (local.get $sphere_radius)
-                (local.get $sphere_material_type)
-                (local.get $sphere_material_albedo_r)
-                (local.get $sphere_material_albedo_g)
-                (local.get $sphere_material_albedo_b)
-                (local.get $sphere_material_fuzz)
-                (local.get $sphere_material_refraction_index)
-                ;; Ray data
-                (local.get $ray_origin_x)
-                (local.get $ray_origin_y)
-                (local.get $ray_origin_z)
-                (local.get $ray_direction_x)
-                (local.get $ray_direction_y)
-                (local.get $ray_direction_z)
-                ;; used to find the closest collission
-                (local.get $closest_so_far)
-                ;; HitRecord data (in)
-                (local.get $hit_point_x)
-                (local.get $hit_point_y)
-                (local.get $hit_point_z)
-                (local.get $hit_t)
-                (local.get $normal_x)
-                (local.get $normal_y)
-                (local.get $normal_z)
-                (local.get $front_face)
-                (local.get $material_type)
-                (local.get $material_albedo_r)
-                (local.get $material_albedo_g)
-                (local.get $material_albedo_b)
-                (local.get $material_fuzz)
-                (local.get $material_refraction_index)
-              )
-
-              ;; pop this value off the stack first to check
-              ;; if anything was hit before assigning variables
-              (local.set $local_object_hit)
-
-              ;; if not hit occurred, do not overwrite previous hit data
-              (if (i32.eqz (local.get $local_object_hit))
-                (then
-                  (br $check_sphere_hit)
-                )
-              )
-
-              ;; pop values off of stack from $hit_sphere
-              ;; and assign hit_record data
-              (local.set $hit_point_x
-                (local.set $hit_point_y
-                  (local.set $hit_point_z
-                    (local.set $hit_t
-                      (local.set $normal_x
-                        (local.set $normal_y
-                          (local.set $normal_z
-                            (local.set $front_face
-                              (local.set $material_type
-                                (local.set $material_albedo_r
-                                  (local.set $material_albedo_g
-                                    (local.set $material_albedo_b
-                                      (local.set $material_fuzz
-                                        (local.set $material_refraction_index)
+            ;; pop values off of stack from $hit_sphere
+            ;; and assign hit_record data
+            (local.set $temp_hit_point_x
+              (local.set $temp_hit_point_y
+                (local.set $temp_hit_point_z
+                  (local.set $temp_hit_t
+                    (local.set $temp_normal_x
+                      (local.set $temp_normal_y
+                        (local.set $temp_normal_z
+                          (local.set $temp_front_face
+                            (local.set $temp_material_type
+                              (local.set $temp_material_albedo_r
+                                (local.set $temp_material_albedo_g
+                                  (local.set $temp_material_albedo_b
+                                    (local.set $temp_material_fuzz
+                                      (local.set $temp_material_refraction_index
+                                        (local.set $local_object_hit
+                                          (call $hit_sphere
+                                            ;; Sphere data
+                                            (local.get $sphere_center_x)
+                                            (local.get $sphere_center_y)
+                                            (local.get $sphere_center_z)
+                                            (local.get $sphere_radius)
+                                            (local.get $sphere_material_type)
+                                            (local.get $sphere_material_albedo_r)
+                                            (local.get $sphere_material_albedo_g)
+                                            (local.get $sphere_material_albedo_b)
+                                            (local.get $sphere_material_fuzz)
+                                            (local.get $sphere_material_refraction_index)
+                                            ;; Ray data
+                                            (local.get $ray_origin_x)
+                                            (local.get $ray_origin_y)
+                                            (local.get $ray_origin_z)
+                                            (local.get $ray_direction_x)
+                                            (local.get $ray_direction_y)
+                                            (local.get $ray_direction_z)
+                                            ;; used to find the closest collission
+                                            (local.get $closest_so_far)
+                                            ;; HitRecord data (in)
+                                            (local.get $temp_hit_point_x)
+                                            (local.get $temp_hit_point_y)
+                                            (local.get $temp_hit_point_z)
+                                            (local.get $temp_hit_t)
+                                            (local.get $temp_normal_x)
+                                            (local.get $temp_normal_y)
+                                            (local.get $temp_normal_z)
+                                            (local.get $temp_front_face)
+                                            (local.get $temp_material_type)
+                                            (local.get $temp_material_albedo_r)
+                                            (local.get $temp_material_albedo_g)
+                                            (local.get $temp_material_albedo_b)
+                                            (local.get $temp_material_fuzz)
+                                            (local.get $temp_material_refraction_index)
+                                          )
+                                        )
                                       )
                                     )
                                   )
@@ -1244,9 +1313,30 @@
                     )
                   )
                 )
-              ) 
-              (local.set $any_object_hit (i32.const 1))
-              (local.set $closest_so_far (local.get $hit_t))
+              )
+            )
+
+
+            (if (local.get $local_object_hit)
+              ;; hit occurred
+              (then 
+                (local.set $out_hit_point_x (local.get $temp_hit_point_x))
+                (local.set $out_hit_point_y (local.get $temp_hit_point_y))
+                (local.set $out_hit_point_z (local.get $temp_hit_point_z))
+                (local.set $out_hit_t (local.get $temp_hit_t))
+                (local.set $out_normal_x (local.get $temp_normal_x))
+                (local.set $out_normal_y (local.get $temp_normal_y))
+                (local.set $out_normal_z (local.get $temp_normal_z))
+                (local.set $out_front_face (local.get $temp_front_face))
+                (local.set $out_material_type (local.get $temp_material_type))
+                (local.set $out_material_albedo_r (local.get $temp_material_albedo_r))
+                (local.set $out_material_albedo_g (local.get $temp_material_albedo_g))
+                (local.set $out_material_albedo_b (local.get $temp_material_albedo_b))
+                (local.set $out_material_fuzz (local.get $temp_material_fuzz))
+                (local.set $out_material_refraction_index (local.get $temp_material_refraction_index))
+                (local.set $any_object_hit (i32.const 1))
+                (local.set $closest_so_far (local.get $temp_hit_t))
+              )
             )
             
             (local.set $i (i32.add (local.get $i) (local.get $step)))
@@ -1260,20 +1350,20 @@
     )
     
     ;; return HitRecord data
-    (local.get $hit_point_x)
-    (local.get $hit_point_y)
-    (local.get $hit_point_z)
-    (local.get $hit_t)
-    (local.get $normal_x)
-    (local.get $normal_y)
-    (local.get $normal_z)
-    (local.get $front_face)
-    (local.get $material_type)
-    (local.get $material_albedo_r)
-    (local.get $material_albedo_g)
-    (local.get $material_albedo_b)
-    (local.get $material_fuzz)
-    (local.get $material_refraction_index)
+    (local.get $out_hit_point_x)
+    (local.get $out_hit_point_y)
+    (local.get $out_hit_point_z)
+    (local.get $out_hit_t)
+    (local.get $out_normal_x)
+    (local.get $out_normal_y)
+    (local.get $out_normal_z)
+    (local.get $out_front_face)
+    (local.get $out_material_type)
+    (local.get $out_material_albedo_r)
+    (local.get $out_material_albedo_g)
+    (local.get $out_material_albedo_b)
+    (local.get $out_material_fuzz)
+    (local.get $out_material_refraction_index)
 
     ;; return if any object in the scene was hit
     (local.get $any_object_hit)
@@ -1379,7 +1469,8 @@
             )
           )
         )
-
+        
+        ;; return early
         (return
           (local.get $color_r)
           (local.get $color_g)
