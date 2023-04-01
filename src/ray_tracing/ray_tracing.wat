@@ -74,9 +74,10 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (memory $memory (export "memory") 2000)
   ;; Addresses:
-  ;; 0-39,999 for canvas pixel data (frame 1)
-  ;; 40,000-79,999 for canvas pixel data (frame 2)
-  ;; 80,000-? for object data
+  ;; 0-39,999 -> canvas pixel data
+  ;; 40,000-79,999 -> framebuffer 1 pixel data
+  ;; 80,000-119,999 -> framebuffer 2 pixel data
+  ;; 120,000-? -> object data
 
   ;; CANVAS CONSTANTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -87,18 +88,29 @@
   ;; height in pixels--this also doubles as the camera_height
   (global $canvas_height (export "canvas_height") (mut i32) (i32.const 0))
 
-  (global $canvas_data_ptr (export "canvas_data_ptr") (mut i32) (i32.const 0))
+  (global $framebuffer_1_ptr (mut i32) (i32.const 0))
 
+  (global $framebuffer_2_ptr (mut i32) (i32.const 0))
+
+  ;; used by external code to know where to start reading from the wasm module's
+  ;; linear memory for the image data
+  ;; this is where all "final" renders get rendered to
+  (global $canvas_data_ptr (export "canvas_data_ptr") i32 (i32.const 0))
+
+  ;; used by external code to get the length of buffer that should be read
+  ;; from the wasm module's linear memory
   ;; must be initialized in $init function
   (global $canvas_data_len (export "canvas_data_len") (mut i32) (i32.const 0))
 
-  (global $bytes_per_pixel (export "bytes_per_pixel") i32 (i32.const 4))
+  (global $canvas_max_data_len (mut i32) (i32.const 0))
+
+  (global $bytes_per_pixel i32 (i32.const 4))
 
   ;; largest possible size the canvas can be in any one direction in pixels
   (global $max_dimension i32 (i32.const 100))
 
   ;; "object" is any object in the scene (sphere, quad, etc.)
-  (global $object_list_ptr i32 (i32.const 80000))
+  (global $object_list_ptr (mut i32) (i32.const 80000))
 
   ;; size of each object element in memory
   (global $object_size i32 (i32.const 76))
@@ -572,7 +584,11 @@
 
   ;; coords should range from 0 to < canvas_length for x
   ;; and 0 to < canvas_height for y
-  (func $canvas_coords_to_canvas_mem_index (param $x i32) (param $y i32) (result i32)
+  (func $canvas_coords_to_canvas_mem_index 
+    (param $x i32) (param $y i32)
+    (param $memory_ptr i32)
+    (result i32)
+    
     ;; check if vertex is out of bounds
     (if (i32.or
         (i32.or
@@ -598,48 +614,41 @@
       )
       ;; nooop
       (then 
-        (call $throw (i32.const 0))
-        (return (global.get $nop_flag))
+        (unreachable)
       )
     )
 
     ;; actually calculate memory index if not out of bounds  
-    (i32.mul
-      (i32.add
-        (local.get $x)
-        (i32.mul
-          (global.get $canvas_width)
-          (local.get $y)
+    (i32.add
+      (local.get $memory_ptr)
+      (i32.mul
+        (i32.add
+          (local.get $x)
+          (i32.mul
+            (global.get $canvas_width)
+            (local.get $y)
+          )
         )
+        (global.get $bytes_per_pixel)
       )
-      (global.get $bytes_per_pixel)
     )
   )
   
-  (func $draw_pixel (param $x i32) (param $y i32)
+  (func $draw_pixel 
+    (param $x i32) (param $y i32)
     (param $r i32) (param $g i32) (param $b i32) (param $a i32)
+    (param $memory_ptr i32)
     (local $canvas_mem_index i32)
-    (local $canvas_mem_value i32)
 
     (local.set $canvas_mem_index 
       (call $canvas_coords_to_canvas_mem_index 
         (local.get $x)
         (local.get $y)
+        (local.get $memory_ptr)
       )
     )
 
-    (local.set $canvas_mem_value
-      (i32.load8_u 
-        (local.get $canvas_mem_index)
-      ) 
-    )
-
-    ;; ignore coordinates that fall outside of (-1, 1) range
-    (if (i32.eq (local.get $canvas_mem_index) (global.get $nop_flag))
-      (then return)
-    )
-    
-    ;; add colors from previous pixels together (max out at 0xff for each color band)
+    ;; store each pixel's color value (0->255) in wasm linear memory
     (i32.store8
       offset=0
       (local.get $canvas_mem_index)
@@ -2067,6 +2076,8 @@
                       (local.get $s)
                       (local.get $t)
                     )
+                    ;; pointer to where to write in wasm linear memory
+                    (global.get $canvas_data_ptr)
                   )
                   
                   (local.set $j (i32.add (local.get $j) (local.get $step)))
@@ -2730,7 +2741,7 @@
 
   ;; save the windows actual size in pixels in wasm memory
   ;; synchronize windows, canvas size, and camera state
-  (func $init_viewport (export "init_viewport") 
+  (func $sync_viewport (export "sync_viewport") 
     (param $prev_window_width i32) 
     (param $prev_window_height i32)
 
@@ -2780,6 +2791,15 @@
 
     (global.set $canvas_width (local.get $new_canvas_width))
     (global.set $canvas_height (local.get $new_canvas_height))
+    (global.set $canvas_data_len
+      (i32.mul
+        (i32.mul
+          (global.get $canvas_width)
+          (global.get $canvas_height)
+        )
+        (global.get $bytes_per_pixel)
+      )
+    )
     
     (call $update_canvas_dimensions 
       (local.get $new_canvas_width) 
@@ -2936,7 +2956,8 @@
     )
   )
 
-  (func $init_canvas_len
+  ;; initializes where all the pointers should be for canvas render buffers, object lists, etc.
+  (func $init_memory
     (global.set $canvas_data_len
       (i32.mul
         (i32.mul
@@ -2946,6 +2967,37 @@
         (global.get $bytes_per_pixel)
       )
     )
+
+    (global.set $canvas_max_data_len
+      (i32.mul
+        (i32.mul
+          (global.get $max_dimension)
+          (global.get $max_dimension)
+        )
+        (global.get $bytes_per_pixel)
+      )
+    )
+
+    (global.set $framebuffer_1_ptr
+      (i32.add 
+        (global.get $canvas_data_ptr)
+        (global.get $canvas_max_data_len)
+      )
+    )
+
+    (global.set $framebuffer_2_ptr
+      (i32.add 
+        (global.get $framebuffer_1_ptr)
+        (global.get $canvas_max_data_len)
+      )
+    )
+
+    (global.set $object_list_ptr
+      (i32.add
+        (global.get $framebuffer_2_ptr)
+        (global.get $canvas_max_data_len)
+      )
+    )
   )
   
   (func $init_constants
@@ -2953,12 +3005,12 @@
     (param $initial_canvas_height i32)
 
     (call $init_now)
-    (call $init_viewport 
+    (call $sync_viewport 
       (local.get $initial_canvas_width) 
       (local.get $initial_canvas_height)
     )
     ;; must be caleld after viewport has been initialized
-    (call $init_canvas_len)
+    (call $init_memory)
   )
   
   (func (export "init") 
