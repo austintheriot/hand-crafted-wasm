@@ -1,7 +1,6 @@
 (module
   ;; TODOS (bugs/fixes/cleanup)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; - fix tearing when resizing screen
   ;; - fix INSIDE normals not getting set/calculated correctly
   ;; - get rid of unneccessary exporrts (all the camera globals)
   ;; - get rid of unused imports (console logs, etc.)
@@ -2939,6 +2938,9 @@
     (local $multiplier f64)
     (local $new_canvas_width i32)
     (local $new_canvas_height i32)
+
+    ;; reset renders
+    (global.set $render_count (i32.const 0))
 
     ;; constrain window size to a certain number of pixels in any one direction
     (if (i32.gt_u (local.get $prev_window_width) (local.get $prev_window_height))
