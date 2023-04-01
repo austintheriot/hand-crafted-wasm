@@ -109,7 +109,7 @@
   (global $bytes_per_pixel i32 (i32.const 4))
 
   ;; largest possible size the canvas can be in any one direction in pixels
-  (global $max_dimension i32 (i32.const 100))
+  (global $max_dimension i32 (i32.const 75))
 
   ;; "object" is any object in the scene (sphere, quad, etc.)
   (global $object_list_ptr (mut i32) (i32.const 80000))
@@ -200,7 +200,7 @@
   (global $max_depth (mut i32) (i32.const 3))
 
   ;; how many samples to average together for every pixel
-  (global $samples_per_pixel (mut i32) (i32.const 2))
+  (global $samples_per_pixel (mut i32) (i32.const 3))
 
   ;; it would take 2 years running constantly at 60 fps to overflow this value
   (global $render_count (mut i32) (i32.const 0))
@@ -1895,10 +1895,35 @@
     (local $step i32)
     (local $i i32)
 
+    (local $randomized_s f64)
+    (local $randomized_t f64)
+
     (local.set $step (i32.const 1))
     (local.set $end_i (global.get $samples_per_pixel))
     
-    
+    (local.set $randomized_s
+      (f64.add
+        (local.get $s)
+        (f64.div
+          (call $random)
+          (f64.convert_i32_u
+            (global.get $canvas_width)
+          )
+        )
+      )
+    )
+
+    (local.set $randomized_t
+      (f64.add
+        (local.get $t)
+        (f64.div
+          (call $random)
+          (f64.convert_i32_u
+            (global.get $canvas_height)
+          )
+        )
+      )
+    )
 
     (block $color_average_block 
       (local.set $i (local.get $start_i))
@@ -1916,8 +1941,8 @@
                     (local.set $ray_direction_y
                       (local.set $ray_direction_z
                         (call $get_ray_from_camera
-                          (local.get $s)
-                          (local.get $t)
+                          (local.get $randomized_s)
+                          (local.get $randomized_t)
                         )
                       )
                     )
