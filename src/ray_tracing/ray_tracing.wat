@@ -1,6 +1,8 @@
 (module
-  ;; TODOS (fixes/cleanup)
+  ;; TODOS (bugs/fixes/cleanup)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; - fix tearing when resizing screen
+  ;; - fix INSIDE normals not getting set/calculated correctly
   ;; - get rid of unneccessary exporrts (all the camera globals)
   ;; - get rid of unused imports (console logs, etc.)
   ;; - remove bounds checks from draw_pixel ?
@@ -8,6 +10,7 @@
 
   ;; TODOS (features)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; - create a "weighted" average against previous renders
   ;; - antialiasing
   ;; - average frames together
 
@@ -59,6 +62,7 @@
   (global $PI (import "Math" "PI") f64)
   (import "console" "log" (func $log (param i32)))
   (import "console" "log" (func $log_2 (param i32) (param i32)))
+  (import "console" "log" (func $log_3 (param i32) (param i32) (param i32)))
   (import "console" "log" (func $log_4 (param i32) (param i32) (param i32) (param i32)))
   (import "console" "log" (func $log_float (param f64)))
   (import "console" "log" (func $log_float_2 (param f64) (param f64)))
@@ -88,11 +92,7 @@
   ;; height in pixels--this also doubles as the camera_height
   (global $canvas_height (export "canvas_height") (mut i32) (i32.const 0))
 
-  (global $framebuffer_1_ptr (mut i32) (i32.const 0))
-
-  (global $framebuffer_2_ptr (mut i32) (i32.const 0))
-
-  (global $current_framebuffer_ptr (mut i32) (i32.const 0))
+  (global $framebuffer_ptr (mut i32) (i32.const 0))
 
   ;; used by external code to know where to start reading from the wasm module's
   ;; linear memory for the image data
@@ -2013,8 +2013,186 @@
     (i32.const 255)
   )
 
+  (func $averaged_render_to_canvas
+    ;; get pixel from previous, plain render currently on canvas
+    ;; get pixel from previous, averaged render currently in framebuffer
+    ;; render the new average onto canvas
 
-  (func $render_to_framebuffer
+    (local $start_i i32) 
+    (local $end_i i32) 
+    (local $i i32)
+    (local $step i32)
+
+    (local $prev_canvas_r i32)
+    (local $prev_canvas_g i32)
+    (local $prev_canvas_b i32)
+    (local $framebuffer_r i32)
+    (local $framebuffer_g i32)
+    (local $framebuffer_b i32)
+    (local $new_canvas_r i32)
+    (local $new_canvas_g i32)
+    (local $new_canvas_b i32)
+
+    (local $current_canvas_data_ptr i32)
+    (local $current_framebuffer_data_ptr i32)
+
+    ;; initialize data for looping
+    (local.set $end_i (global.get $canvas_max_data_len))
+    (local.set $step (global.get $bytes_per_pixel))
+
+    ;; iterate through memory indexes and average the previous framebuffer
+    ;; value with the previous canvas value to get an averaged render
+    (block $outer_loop_block 
+      (local.set $i (local.get $start_i))
+      (loop $inner_loop
+        (if (i32.lt_s (local.get $i) (local.get $end_i))
+          (then
+
+            (local.set $current_canvas_data_ptr
+              (i32.add
+                (global.get $canvas_data_ptr)
+                (local.get $i)
+              )
+            )
+
+            (local.set $current_framebuffer_data_ptr
+              (i32.add
+                (global.get $framebuffer_ptr)
+                (local.get $i)
+              )
+            )
+
+            ;; load previous framebuffer values
+            (local.set $framebuffer_r 
+              (i32.load8_u
+                offset=0
+                (local.get $current_framebuffer_data_ptr)
+              )
+            )
+            (local.set $framebuffer_g
+              (i32.load8_u
+                offset=1
+                (local.get $current_framebuffer_data_ptr)
+              )
+            )
+            (local.set $framebuffer_b
+              (i32.load8_u
+                offset=2
+                (local.get $current_framebuffer_data_ptr)
+              )
+            )
+
+            
+            (if (i32.lt_u (global.get $render_count) (i32.const 2))
+              (then
+                ;; copy framebuffer straight into the canvas memory
+                ;; since there is nothing to average yet
+                (i32.store8
+                  offset=0
+                  (local.get $current_canvas_data_ptr)
+                  (local.get $framebuffer_r)
+                )
+                (i32.store8
+                  offset=1
+                  (local.get $current_canvas_data_ptr)
+                  (local.get $framebuffer_g)
+                )
+                (i32.store8
+                  offset=2
+                  (local.get $current_canvas_data_ptr)
+                  (local.get $framebuffer_b)
+                )
+                (i32.store8
+                  offset=3
+                  (local.get $current_canvas_data_ptr)
+                  (i32.const 255)
+                )
+              )
+              (else 
+                ;; average previous renders together and write to canvas memory
+                ;; load previous canvas value
+                (local.set $prev_canvas_r 
+                  (i32.load8_u
+                    offset=0
+                    (local.get $current_canvas_data_ptr)
+                  )
+                )
+                (local.set $prev_canvas_g
+                  (i32.load8_u
+                    offset=1
+                    (local.get $current_canvas_data_ptr)
+                  )
+                )
+                (local.set $prev_canvas_b
+                  (i32.load8_u
+                    offset=2
+                    (local.get $current_canvas_data_ptr)
+                  )
+                )
+
+                ;; average previous values to get new one
+                (local.set $new_canvas_r
+                  (i32.div_s
+                    (i32.add 
+                      (local.get $prev_canvas_r)
+                      (local.get $framebuffer_r)
+                    )
+                    (i32.const 2)
+                  )
+                )
+                (local.set $new_canvas_g
+                  (i32.div_s
+                    (i32.add 
+                      (local.get $prev_canvas_g)
+                      (local.get $framebuffer_g)
+                    )
+                    (i32.const 2)
+                  )
+                )
+                (local.set $new_canvas_b
+                  (i32.div_s
+                    (i32.add 
+                      (local.get $prev_canvas_b)
+                      (local.get $framebuffer_b)
+                    )
+                    (i32.const 2)
+                  )
+                )
+
+                ;; store new values in canvas memory
+                ;; todo: if average is same as previous render
+                ;; but different from new one, favor the new one
+                (i32.store8
+                  offset=0
+                  (local.get $current_canvas_data_ptr)
+                  (local.get $new_canvas_r)
+                )
+                (i32.store8
+                  offset=1
+                  (local.get $current_canvas_data_ptr)
+                  (local.get $new_canvas_g)
+                )
+                (i32.store8
+                  offset=2
+                  (local.get $current_canvas_data_ptr)
+                  (local.get $new_canvas_b)
+                )
+              )
+            )
+
+            (local.set $i (i32.add (local.get $i) (local.get $step)))
+            ;; return to beginning of loop
+            (br $inner_loop)
+          )
+          ;; exit loop
+          (else (br $outer_loop_block))
+        )
+      )
+    )
+  )
+
+
+  (func $plain_render_to_framebuffer
     (local $start_i i32) 
     (local $end_i i32) 
 
@@ -2043,19 +2221,6 @@
       )
     )
 
-    ;; update which framebuffer we're rendering to
-    (global.set $current_framebuffer_ptr
-      (select
-        (global.get $framebuffer_1_ptr)
-        (global.get $framebuffer_2_ptr)
-        ;; render to framebuffer 1 if render_count is even
-        (i32.rem_u
-          (global.get $render_count)
-          (i32.const 2)
-        )
-      )
-    )
-    
     (local.set $step (i32.const 1))
     (local.set $end_i (global.get $canvas_width))
     (local.set $end_j (global.get $canvas_height))
@@ -2103,7 +2268,7 @@
                       (local.get $t)
                     )
                     ;; pointer to where to write in wasm linear memory
-                    (global.get $current_framebuffer_ptr)
+                    (global.get $framebuffer_ptr)
                   )
                   
                   (local.set $j (i32.add (local.get $j) (local.get $step)))
@@ -2970,7 +3135,8 @@
     (call $update_camera_based_on_stick_position)
     (call $update_position_based_on_controls)
     (call $update_camera_values) 
-    (call $render_to_framebuffer)
+    (call $plain_render_to_framebuffer)
+    (call $averaged_render_to_canvas)
   )
 
   (func $init_now
@@ -3004,27 +3170,16 @@
       )
     )
 
-    (global.set $framebuffer_1_ptr
+    (global.set $framebuffer_ptr
       (i32.add 
         (global.get $canvas_data_ptr)
         (global.get $canvas_max_data_len)
       )
     )
 
-    (global.set $framebuffer_2_ptr
-      (i32.add 
-        (global.get $framebuffer_1_ptr)
-        (global.get $canvas_max_data_len)
-      )
-    )
-
-    (global.set $current_framebuffer_ptr
-      (global.get $framebuffer_1_ptr)
-    )
-
     (global.set $object_list_ptr
       (i32.add
-        (global.get $framebuffer_2_ptr)
+        (global.get $framebuffer_ptr)
         (global.get $canvas_max_data_len)
       )
     )
