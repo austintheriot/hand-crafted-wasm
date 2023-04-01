@@ -142,15 +142,15 @@
       .then(({ instance: { exports: wasm } }) => {
         wasm.init(window.innerWidth, window.innerHeight);
 
+        console.log({ wasm })
+
         const render = () => {
           if (wasm.canvas_width.value && wasm.canvas_height.value) {
             // get reference to canvas image data in wasm's linear memory
             const canvasData = new Uint8Array(
               wasm.memory.buffer,
-              0,
-              wasm.canvas_width.value *
-                wasm.canvas_height.value *
-                wasm.bytes_per_pixel.value
+              wasm.canvas_data_ptr.value,
+              wasm.canvas_data_len.value
             );
 
             // transform wasm linear memory to image data

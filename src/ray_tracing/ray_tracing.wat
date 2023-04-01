@@ -69,8 +69,9 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (memory $memory (export "memory") 2000)
   ;; Addresses:
-  ;; 0-39,999 for canvas pixel data
-  ;; 40,000-? for object data
+  ;; 0-39,999 for canvas pixel data (frame 1)
+  ;; 40,000-79,999 for canvas pixel data (frame 2)
+  ;; 80,000-? for object data
 
   ;; CANVAS CONSTANTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -81,13 +82,18 @@
   ;; height in pixels--this also doubles as the camera_height
   (global $canvas_height (export "canvas_height") (mut i32) (i32.const 0))
 
-  (global $bytes_per_px (export "bytes_per_pixel") i32 (i32.const 4))
+  (global $canvas_data_ptr (export "canvas_data_ptr") (mut i32) (i32.const 0))
+
+  ;; must be initialized in $init function
+  (global $canvas_data_len (export "canvas_data_len") (mut i32) (i32.const 0))
+
+  (global $bytes_per_pixel (export "bytes_per_pixel") i32 (i32.const 4))
 
   ;; largest possible size the canvas can be in any one direction in pixels
   (global $max_dimension i32 (i32.const 100))
 
   ;; "object" is any object in the scene (sphere, quad, etc.)
-  (global $object_list_ptr i32 (i32.const 40000))
+  (global $object_list_ptr i32 (i32.const 80000))
 
   ;; size of each object element in memory
   (global $object_size i32 (i32.const 76))
@@ -601,7 +607,7 @@
           (local.get $y)
         )
       )
-      (global.get $bytes_per_px)
+      (global.get $bytes_per_pixel)
     )
   )
   
@@ -2718,7 +2724,8 @@
   )
 
   ;; save the windows actual size in pixels in wasm memory
-  (func $sync_viewport (export "sync_viewport") 
+  ;; synchronize windows, canvas size, and camera state
+  (func $init_viewport (export "init_viewport") 
     (param $prev_window_width i32) 
     (param $prev_window_height i32)
 
@@ -2915,7 +2922,7 @@
     (call $update_camera_values) 
   )
 
-  (func $set_initial_now
+  (func $init_now
     (global.set $now
       (call $now)
     )
@@ -2923,19 +2930,40 @@
       (global.get $now)
     )
   )
+
+  (func $init_canvas_len
+    (global.set $canvas_data_len
+      (i32.mul
+        (i32.mul
+          (global.get $canvas_width)
+          (global.get $canvas_height)
+        )
+        (global.get $bytes_per_pixel)
+      )
+    )
+  )
+  
+  (func $init_constants
+    (param $initial_canvas_width i32) 
+    (param $initial_canvas_height i32)
+
+    (call $init_now)
+    (call $init_viewport 
+      (local.get $initial_canvas_width) 
+      (local.get $initial_canvas_height)
+    )
+    ;; must be caleld after viewport has been initialized
+    (call $init_canvas_len)
+  )
   
   (func (export "init") 
     (param $initial_canvas_width i32) 
     (param $initial_canvas_height i32)
 
-    (call $set_initial_now)
-
-    (call $generate_default_objects_in_world)
-
-    ;; synchronize window, canvas size, and camera state
-    (call $sync_viewport 
-      (local.get $initial_canvas_width) 
+    (call $init_constants
+      (local.get $initial_canvas_width)
       (local.get $initial_canvas_height)
     )
+    (call $generate_default_objects_in_world)
   )
 )
