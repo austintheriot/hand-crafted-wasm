@@ -92,6 +92,8 @@
 
   (global $framebuffer_2_ptr (mut i32) (i32.const 0))
 
+  (global $current_framebuffer_ptr (mut i32) (i32.const 0))
+
   ;; used by external code to know where to start reading from the wasm module's
   ;; linear memory for the image data
   ;; this is where all "final" renders get rendered to
@@ -199,6 +201,9 @@
 
   ;; how many samples to average together for every pixel
   (global $samples_per_pixel (mut i32) (i32.const 2))
+
+  ;; it would take 2 years running constantly at 60 fps to overflow this value
+  (global $render_count (mut i32) (i32.const 0))
 
   (global $min_t f64 (f64.const 0.001))
   (global $max_t f64 (f64.const 100000))
@@ -2009,7 +2014,7 @@
   )
 
 
-  (func $render_to_internal_buffer
+  (func $render_to_framebuffer
     (local $start_i i32) 
     (local $end_i i32) 
 
@@ -2030,6 +2035,27 @@
     (local $s f64)
     (local $t f64)
 
+    ;; increment render count
+    (global.set $render_count 
+      (i32.add
+        (global.get $render_count)
+        (i32.const 1)
+      )
+    )
+
+    ;; update which framebuffer we're rendering to
+    (global.set $current_framebuffer_ptr
+      (select
+        (global.get $framebuffer_1_ptr)
+        (global.get $framebuffer_2_ptr)
+        ;; render to framebuffer 1 if render_count is even
+        (i32.rem_u
+          (global.get $render_count)
+          (i32.const 2)
+        )
+      )
+    )
+    
     (local.set $step (i32.const 1))
     (local.set $end_i (global.get $canvas_width))
     (local.set $end_j (global.get $canvas_height))
@@ -2077,7 +2103,7 @@
                       (local.get $t)
                     )
                     ;; pointer to where to write in wasm linear memory
-                    (global.get $canvas_data_ptr)
+                    (global.get $current_framebuffer_ptr)
                   )
                   
                   (local.set $j (i32.add (local.get $j) (local.get $step)))
@@ -2943,8 +2969,8 @@
   (func (export "tick")
     (call $update_camera_based_on_stick_position)
     (call $update_position_based_on_controls)
-    (call $render_to_internal_buffer)
     (call $update_camera_values) 
+    (call $render_to_framebuffer)
   )
 
   (func $init_now
@@ -2990,6 +3016,10 @@
         (global.get $framebuffer_1_ptr)
         (global.get $canvas_max_data_len)
       )
+    )
+
+    (global.set $current_framebuffer_ptr
+      (global.get $framebuffer_1_ptr)
     )
 
     (global.set $object_list_ptr
