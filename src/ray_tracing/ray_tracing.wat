@@ -193,6 +193,8 @@
 
   (global $left_stick_y_position (export "left_stick_y_position") (mut f64) (f64.const 0.0))
 
+  (global $left_stick_z_position (export "left_stick_z_position") (mut f64) (f64.const 0.0))
+
   (global $right_stick_x_position (export "right_stick_x_position") (mut f64) (f64.const 0.0))
 
   (global $right_stick_y_position (export "right_stick_y_position") (mut f64) (f64.const 0.0))
@@ -2813,8 +2815,11 @@
 
     ;; do not update if no controls down
     (if (i32.and
-          (f64.eq (global.get $left_stick_x_position) (f64.const 0.0))
-          (f64.eq (global.get $left_stick_y_position) (f64.const 0.0))
+          (i32.and
+            (f64.eq (global.get $left_stick_x_position) (f64.const 0.0))
+            (f64.eq (global.get $left_stick_y_position) (f64.const 0.0))
+          )
+          (f64.eq (global.get $left_stick_z_position) (f64.const 0.0))
         )
       (then 
         (return)
@@ -2866,6 +2871,31 @@
                     (global.get $vup_z)
                   )
                   (global.get $left_stick_x_position)
+                )
+                (global.get $movement_sensitivity)
+              )
+              (local.get $dt)
+            )
+          )
+        )
+      )
+    )
+
+    ;; set z component
+    (global.set $camera_origin_x
+      (global.set $camera_origin_y
+        (global.set $camera_origin_z
+          (call $vec_add_vec
+            (global.get $camera_origin_x)
+            (global.get $camera_origin_y)
+            (global.get $camera_origin_z)
+            (call $vec_mul_constant
+              (call $vec_mul_constant
+                (call $vec_mul_constant
+                  (global.get $vup_x)
+                  (global.get $vup_y)
+                  (global.get $vup_z)
+                  (global.get $left_stick_z_position)
                 )
                 (global.get $movement_sensitivity)
               )

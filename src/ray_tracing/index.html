@@ -262,47 +262,36 @@
         rightStickButton.addEventListener("click", (e) => e.preventDefault());
 
         const keyDownState = {};
-        window.addEventListener("keydown", (e) => {
-          if (keyDownState[e.key]) return;
+        const makeKeyHandler = (handlerType) => (e) => {
+          const booleanValue = handlerType === "down";
+          if (keyDownState[e.key] === booleanValue) return;
 
+          const constant = handlerType === "down" ? 1 : -1;
           switch (e.key) {
             case "w":
-              wasm.left_stick_y_position.value += 1.0;
+              wasm.left_stick_y_position.value += constant;
               break;
             case "s":
-              wasm.left_stick_y_position.value -= 1.0;
+              wasm.left_stick_y_position.value -= constant;
               break;
             case "d":
-              wasm.left_stick_x_position.value += 1.0;
+              wasm.left_stick_x_position.value += constant;
               break;
             case "a":
-              wasm.left_stick_x_position.value -= 1.0;
+              wasm.left_stick_x_position.value -= constant;
+              break;
+            case " ":
+              wasm.left_stick_z_position.value += constant;
+              break;
+            case "Shift":
+              wasm.left_stick_z_position.value -= constant;
               break;
           }
 
-          keyDownState[e.key] = true;
-        });
-
-        window.addEventListener("keyup", (e) => {
-          if (!keyDownState[e.key]) return;
-
-          switch (e.key) {
-            case "w":
-              wasm.left_stick_y_position.value -= 1.0;
-              break;
-            case "s":
-              wasm.left_stick_y_position.value += 1.0;
-              break;
-            case "d":
-              wasm.left_stick_x_position.value -= 1.0;
-              break;
-            case "a":
-              wasm.left_stick_x_position.value += 1.0;
-              break;
-          }
-
-          keyDownState[e.key] = false;
-        });
+          keyDownState[e.key] = booleanValue;
+        };
+        window.addEventListener("keydown", makeKeyHandler("down"));
+        window.addEventListener("keyup", makeKeyHandler("up"));
 
         const TOTAL_ITERATIONS = Infinity;
         let currentIteration = 0;
@@ -314,7 +303,7 @@
           } else {
             currentIteration += 1;
           }
-          
+
           wasm.tick();
           render();
           requestAnimationFrame(animate);
