@@ -1,10 +1,15 @@
 (module
-  ;; TODOS
+  ;; TODOS (fixes/cleanup)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; - get rid of unneccessary exporrts (all the camera globals)
   ;; - get rid of unused imports (console logs, etc.)
   ;; - remove bounds checks from draw_pixel ?
   ;; - calculate memory needed for canvas dynamically to allow manipulating dimensions dynamically
+
+  ;; TODOS (features)
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; - antialiasing
+  ;; - average frames together
 
   ;; TYPES
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
