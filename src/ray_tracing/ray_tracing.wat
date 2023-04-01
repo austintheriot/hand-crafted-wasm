@@ -172,7 +172,10 @@
   (global $look_at_z (mut f64) (f64.const 1))
 
   ;; number of times a ray can "bounce"
-  (global $max_depth (mut i32) (i32.const 5))
+  (global $max_depth (mut i32) (i32.const 3))
+
+  ;; how many samples to average together for every pixel
+  (global $samples_per_pixel (mut i32) (i32.const 2))
 
   (global $min_t f64 (f64.const 0.001))
   (global $max_t f64 (f64.const 100000))
@@ -1878,44 +1881,89 @@
     (local $color_r f64)
     (local $color_g f64)
     (local $color_b f64)
+
+    (local $start_i i32) 
+    (local $end_i i32) 
+    (local $step i32)
+    (local $i i32)
+
+    (local.set $step (i32.const 1))
+    (local.set $end_i (global.get $samples_per_pixel))
     
-    ;; wasm-equivalent of desctructuring assignment
-    ;; pops multiple values off the stack
-    ;; and assigns them to local variables
-    (local.set $ray_origin_x
-      (local.set $ray_origin_y
-        (local.set $ray_origin_z
-          (local.set $ray_direction_x
-            (local.set $ray_direction_y
-              (local.set $ray_direction_z
-                (call $get_ray_from_camera
-                  (local.get $s)
-                  (local.get $t)
+    
+
+    (block $color_average_block 
+      (local.set $i (local.get $start_i))
+      (loop $color_average_loop
+        (if (i32.lt_s (local.get $i) (local.get $end_i))
+          (then
+
+            ;; wasm-equivalent of desctructuring assignment
+            ;; pops multiple values off the stack
+            ;; and assigns them to local variables
+            (local.set $ray_origin_x
+              (local.set $ray_origin_y
+                (local.set $ray_origin_z
+                  (local.set $ray_direction_x
+                    (local.set $ray_direction_y
+                      (local.set $ray_direction_z
+                        (call $get_ray_from_camera
+                          (local.get $s)
+                          (local.get $t)
+                        )
+                      )
+                    )
+                  )
                 )
               )
+            )
+
+            ;; get color that each ray returns
+            (local.set $color_r
+              (local.set $color_g
+                (local.set $color_b
+                  (call $vec_add_vec
+                    (local.get $color_r)
+                    (local.get $color_g)
+                    (local.get $color_b)
+                    (call $ray_color
+                      (local.get $ray_origin_x)
+                      (local.get $ray_origin_y)
+                      (local.get $ray_origin_z)
+                      (local.get $ray_direction_x)
+                      (local.get $ray_direction_y)
+                      (local.get $ray_direction_z)
+                    )
+                  )
+                )
+              )
+            )
+            
+            (local.set $i (i32.add (local.get $i) (local.get $step)))
+            ;; return to beginning of loop
+            (br $color_average_loop)
+          )
+          ;; exit loop
+          (else (br $color_average_block))
+        )
+      )
+    )
+
+    ;; scale color by number of samples (get average)
+    (local.set $color_r
+      (local.set $color_g
+        (local.set $color_b
+          (call $vec_div_constant
+            (local.get $color_r)
+            (local.get $color_g)
+            (local.get $color_b)
+            (f64.convert_i32_u
+              (global.get $samples_per_pixel)
             )
           )
         )
       )
     )
-
-    ;; get color that each ray returns
-    (local.set $color_r
-      (local.set $color_g
-        (local.set $color_b
-          (call $ray_color
-            (local.get $ray_origin_x)
-            (local.get $ray_origin_y)
-            (local.get $ray_origin_z)
-            (local.get $ray_direction_x)
-            (local.get $ray_direction_y)
-            (local.get $ray_direction_z)
-          )
-        )
-      )
-    )
-
-    ;; todo - scale color by number of samples
 
     ;; gamma correction
     (local.set $color_r 
@@ -1934,6 +1982,7 @@
       (local.get $color_g)
       (local.get $color_b)
     )
+    ;; alpha channel
     (i32.const 255)
   )
 
