@@ -9,6 +9,7 @@
 
   ;; TODOS (features)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; - allow moving camera with mouse
   ;; - antialiasing
   ;; - improve performance with SIMD instructions
   ;; - allow some degree of blur when averaging frames
@@ -1115,56 +1116,44 @@
       )
     )
 
-    ;; ;; todo: reinstate this logic for calculating
-    ;; ;; whether a normal is inside or outside the sphere
-    ;; ;; (haven't been able to resolve bug where normals are
-    ;; ;; inverted for some reason)
-    ;; (local.set $out_front_face
-    ;;   (f64.lt
-    ;;     (call $vec_dot
-    ;;       (local.get $ray_direction_x)
-    ;;       (local.get $ray_direction_y)
-    ;;       (local.get $ray_direction_z)
-    ;;       (local.get $outward_normal_x)
-    ;;       (local.get $outward_normal_y)
-    ;;       (local.get $outward_normal_z)
-    ;;     )
-    ;;     (f64.const 0.0)
-    ;;   )
-    ;;   (if (local.get $out_front_face) 
-    ;;     (then
-    ;;       (local.set $out_normal_x
-    ;;         (local.get $outward_normal_x)
-    ;;       )
-    ;;       (local.set $out_normal_y
-    ;;         (local.get $outward_normal_y)
-    ;;       )
-    ;;       (local.set $out_normal_z 
-    ;;         (local.get $outward_normal_z)
-    ;;       )
-    ;;     )
-    ;;     (else 
-    ;;       (local.set $out_normal_x
-    ;;         (f64.neg (local.get $outward_normal_x))
-    ;;       )
-    ;;       (local.set $out_normal_y
-    ;;         (f64.neg (local.get $outward_normal_y))
-    ;;       )
-    ;;       (local.set $out_normal_z 
-    ;;         (f64.neg (local.get $outward_normal_z))
-    ;;       )
-    ;;     )
-    ;;   )
-    ;; )
-
-    (local.set $out_normal_x
-      (local.get $outward_normal_x)
-    )
-    (local.set $out_normal_y
-      (local.get $outward_normal_y)
-    )
-    (local.set $out_normal_z 
-      (local.get $outward_normal_z)
+    ;; todo: there is a bug here (likely?) this 
+    ;; if/else is technically backwards?? 
+    (local.set $out_front_face
+      (f64.lt
+        (call $vec_dot
+          (local.get $ray_direction_x)
+          (local.get $ray_direction_y)
+          (local.get $ray_direction_z)
+          (local.get $outward_normal_x)
+          (local.get $outward_normal_y)
+          (local.get $outward_normal_z)
+        )
+        (f64.const 0.0)
+      )
+      (if (local.get $out_front_face) 
+        (then
+          (local.set $out_normal_x
+            (f64.neg (local.get $outward_normal_x))
+          )
+          (local.set $out_normal_y
+            (f64.neg (local.get $outward_normal_y))
+          )
+          (local.set $out_normal_z 
+            (f64.neg (local.get $outward_normal_z))
+          )
+        )
+        (else 
+          (local.set $out_normal_x
+            (local.get $outward_normal_x)
+          )
+          (local.set $out_normal_y
+            (local.get $outward_normal_y)
+          )
+          (local.set $out_normal_z 
+            (local.get $outward_normal_z)
+          )
+        )
+      )
     )
 
     ;; return the HitRecord data
@@ -1831,34 +1820,9 @@
       )
     )
 
-    
-
-    
-
-    ;; hit detected: show object
-    ;; display's the circle's normals for now
-    ;; todo - replace with scattering calculations
-    (f64.mul
-      (f64.const 0.5)
-      (f64.add
-        (local.get $normal_x)
-        (f64.const 1.0)
-      )
-    )
-    (f64.mul
-      (f64.const 0.5)
-      (f64.add
-        (local.get $normal_y)
-        (f64.const 1.0)
-      )
-    )
-    (f64.mul
-      (f64.const 0.5)
-      (f64.add
-        (local.get $normal_z)
-        (f64.const 1.0)
-      )
-    )
+    (local.get $color_r)
+    (local.get $color_g)
+    (local.get $color_b)
   )
 
   ;; converts f64 to i32 (without multiplication)
