@@ -9,9 +9,8 @@
 
   ;; TODOS (features)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; - create a "weighted" average against previous renders
   ;; - antialiasing
-  ;; - average frames together
+  ;; - improve performance with SIMD instructions
 
   ;; TYPES
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1861,6 +1860,24 @@
     )
   )
 
+  ;; converts f64 to i32 (without multiplication)
+  (func $color_f64_to_i32
+    (param $r f64)
+    (param $g f64)
+    (param $b f64)
+    (result i32 i32 i32)
+
+    (i32.trunc_sat_f64_u
+      (local.get $r)
+    )
+    (i32.trunc_sat_f64_u
+      (local.get $g)
+    )
+    (i32.trunc_sat_f64_u
+      (local.get $b)
+    )
+  )
+
   ;; converts f64 color in range 0.0->1.0 into u8 color 0-255
   (func $color_f64_to_u8
     (param $r f64)
@@ -2035,6 +2052,10 @@
     (local $current_canvas_data_ptr i32)
     (local $current_framebuffer_data_ptr i32)
 
+    (local $render_count_float f64)
+    (local $prev_canvas_pixel_weight f64)
+    (local $framebuffer_pixel_weight f64)
+
     ;; initialize data for looping
     (local.set $end_i (global.get $canvas_max_data_len))
     (local.set $step (global.get $bytes_per_pixel))
@@ -2129,32 +2150,50 @@
                   )
                 )
 
-                ;; average previous values to get new one
+                ;; get weighted average
+                (local.set $render_count_float
+                  (f64.convert_i32_u
+                    (global.get $render_count)
+                  )
+                )
+
+                (local.set $prev_canvas_pixel_weight
+                  (f64.div
+                    (f64.sub
+                      (local.get $render_count_float)
+                      (f64.const 1.0)
+                    )
+                    (local.get $render_count_float)
+                  )
+                )
+                
+                (local.set $framebuffer_pixel_weight
+                  (f64.div
+                    (f64.const 1.0)
+                    (local.get $render_count_float)
+                  )
+                )
+
                 (local.set $new_canvas_r
-                  (i32.div_s
-                    (i32.add 
-                      (local.get $prev_canvas_r)
-                      (local.get $framebuffer_r)
+                  (local.set $new_canvas_g
+                    (local.set $new_canvas_b
+                      (call $color_f64_to_i32
+                        (call $vec_add_vec
+                          (call $vec_mul_constant
+                            (f64.convert_i32_u (local.get $prev_canvas_r))
+                            (f64.convert_i32_u (local.get $prev_canvas_g))
+                            (f64.convert_i32_u (local.get $prev_canvas_b))
+                            (local.get $prev_canvas_pixel_weight)
+                          )
+                          (call $vec_mul_constant
+                            (f64.convert_i32_u (local.get $framebuffer_r))
+                            (f64.convert_i32_u (local.get $framebuffer_g))
+                            (f64.convert_i32_u (local.get $framebuffer_b))
+                            (local.get $framebuffer_pixel_weight)
+                          )
+                        )
+                      )
                     )
-                    (i32.const 2)
-                  )
-                )
-                (local.set $new_canvas_g
-                  (i32.div_s
-                    (i32.add 
-                      (local.get $prev_canvas_g)
-                      (local.get $framebuffer_g)
-                    )
-                    (i32.const 2)
-                  )
-                )
-                (local.set $new_canvas_b
-                  (i32.div_s
-                    (i32.add 
-                      (local.get $prev_canvas_b)
-                      (local.get $framebuffer_b)
-                    )
-                    (i32.const 2)
                   )
                 )
 
@@ -2929,6 +2968,10 @@
     )
   )
 
+  (func $reset_render_count
+    (global.set $render_count (i32.const 0))
+  )
+
   ;; save the windows actual size in pixels in wasm memory
   ;; synchronize windows, canvas size, and camera state
   (func $sync_viewport (export "sync_viewport") 
@@ -2939,8 +2982,7 @@
     (local $new_canvas_width i32)
     (local $new_canvas_height i32)
 
-    ;; reset renders
-    (global.set $render_count (i32.const 0))
+    (call $reset_render_count)
 
     ;; constrain window size to a certain number of pixels in any one direction
     (if (i32.gt_u (local.get $prev_window_width) (local.get $prev_window_height))
@@ -3002,6 +3044,15 @@
   )
 
   (func $update_camera_based_on_stick_position
+    (if (i32.and
+          (f64.eq (global.get $right_stick_x_position) (f64.const 0.0))
+          (f64.eq (global.get $right_stick_y_position) (f64.const 0.0))
+        )
+      (then 
+        (return)
+      )
+    )
+
     (global.set $yaw 
       (f64.add
         (global.get $yaw)
@@ -3020,6 +3071,8 @@
         )
       )
     )
+    
+    (call $reset_render_count)
     (call $update_camera_values) 
   )
 
@@ -3130,6 +3183,8 @@
         )
       )
     )
+
+    (call $reset_render_count)
   )
 
   ;; called on each tick to update all internal state
