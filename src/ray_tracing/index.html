@@ -21,6 +21,7 @@
       height: 100vh;
       object-fit: cover;
       touch-action: none;
+      cursor: move;
 
       /* for debugging */
       background-color: lightpink;
@@ -228,6 +229,61 @@
           );
         };
 
+        let mouseDown = false;
+        const mouseMoveData = {
+          x: 0,
+          y: 0,
+          dx: 0,
+          dy: 0,
+          px: 0,
+          py: 0,
+        }
+
+        window.addEventListener('mousedown', (e) => {
+            mouseDown = true;
+            mouseMoveData.x = e.screenX;
+            mouseMoveData.y = e.screenY;
+        });
+        const MOVEMENT_CONSTANT = 150;
+        window.addEventListener('mousemove', (e) => {
+            if (!mouseDown) return;
+            mouseMoveData.dx = e.screenX - mouseMoveData.x
+            mouseMoveData.dy = e.screenY - mouseMoveData.y
+            mouseMoveData.px = mouseMoveData.dx / MOVEMENT_CONSTANT;
+            mouseMoveData.py = mouseMoveData.dy / MOVEMENT_CONSTANT;
+            wasm.right_stick_x_position.value = mouseMoveData.px ** 3 / 50;
+            wasm.right_stick_y_position.value = -(mouseMoveData.py ** 3) / 50;
+
+            // easier to reason when the y value is "flipped" to be bottom-to-top
+            const yValue = -(mouseMoveData.py);
+            if (mouseMoveData.px < 0 && yValue < 0) {
+              canvas.style.setProperty('cursor', 'sw-resize')
+            } else if (mouseMoveData.px < 0 && yValue === 0) {
+              canvas.style.setProperty('cursor', 'w-resize')
+            } else if (mouseMoveData.px < 0 && yValue > 0) {
+              canvas.style.setProperty('cursor', 'nw-resize')
+            } else if (mouseMoveData.px === 0 && yValue < 0) {
+              canvas.style.setProperty('cursor', 's-resize')
+            } else if (mouseMoveData.px === 0 && yValue === 0) {
+              canvas.style.setProperty('cursor', 'move')
+            } else if (mouseMoveData.px === 0 && yValue > 0) {
+              canvas.style.setProperty('cursor', 'n-resize')
+            } else if (mouseMoveData.px > 0 && yValue < 0) {
+              canvas.style.setProperty('cursor', 'se-resize')
+            } else if (mouseMoveData.px > 0 && yValue === 0) {
+              canvas.style.setProperty('cursor', 'e-resize')
+            } else if (mouseMoveData.px > 0 && yValue > 0) {
+              canvas.style.setProperty('cursor', 'ne-resize')
+            }
+            console.log({mouseMoveData})
+        });
+        window.addEventListener('mouseup', (e) => {
+            mouseDown = false;
+            console.log(e)
+            wasm.right_stick_x_position.value = 0;
+            wasm.right_stick_y_position.value = 0;
+        });
+
         const makeHandleTouchEnd = (side) => () => {
           const thumbIndicator =
             side === "left"
@@ -297,7 +353,8 @@
         const handleBlur = () => {
           Object.keys(keyDownState).forEach((key) => {
             keyDownState[key] = false;
-            
+            mouseDown = false;
+
             wasm.left_stick_x_position.value = 0;
             wasm.left_stick_y_position.value = 0;
             wasm.left_stick_z_position.value = 0;
