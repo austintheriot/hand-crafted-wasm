@@ -109,7 +109,7 @@
   (global $bytes_per_pixel i32 (i32.const 4))
 
   ;; largest possible size the canvas can be in any one direction in pixels
-  (global $max_dimension i32 (i32.const 75))
+  (global $max_dimension i32 (i32.const 60))
 
   ;; "object" is any object in the scene (sphere, quad, etc.)
   (global $object_list_ptr (mut i32) (i32.const 80000))
@@ -200,7 +200,7 @@
   (global $max_depth (mut i32) (i32.const 3))
 
   ;; how many samples to average together for every pixel
-  (global $samples_per_pixel (mut i32) (i32.const 3))
+  (global $samples_per_pixel (mut i32) (i32.const 5))
 
   ;; it would take 2 years running constantly at 60 fps to overflow this value
   (global $render_count (mut i32) (i32.const 0))
@@ -2963,8 +2963,14 @@
     )
   )
 
-  (func $reset_render_count
+  ;; good for when moving camera to mask the noise
+  (func $soft_reset_render_count
     (global.set $render_count (i32.const 3))
+  )
+
+  ;; good for when resizing viewport to prevent tearing
+  (func $hard_reset_render_count
+    (global.set $render_count (i32.const 0))
   )
 
   ;; save the windows actual size in pixels in wasm memory
@@ -2977,7 +2983,7 @@
     (local $new_canvas_width i32)
     (local $new_canvas_height i32)
 
-    (call $reset_render_count)
+    (call $hard_reset_render_count)
 
     ;; constrain window size to a certain number of pixels in any one direction
     (if (i32.gt_u (local.get $prev_window_width) (local.get $prev_window_height))
@@ -3067,7 +3073,7 @@
       )
     )
     
-    (call $reset_render_count)
+    (call $soft_reset_render_count)
     (call $update_camera_values) 
   )
 
@@ -3179,7 +3185,7 @@
       )
     )
 
-    (call $reset_render_count)
+    (call $soft_reset_render_count)
   )
 
   ;; called on each tick to update all internal state
