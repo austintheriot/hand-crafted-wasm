@@ -2205,6 +2205,11 @@
                   (local.get $current_canvas_data_ptr)
                   (local.get $new_canvas_b)
                 )
+                (i32.store8
+                  offset=3
+                  (local.get $current_canvas_data_ptr)
+                  (i32.const 255)
+                )
               )
             )
 
@@ -2959,7 +2964,7 @@
   )
 
   (func $reset_render_count
-    (global.set $render_count (i32.const 0))
+    (global.set $render_count (i32.const 3))
   )
 
   ;; save the windows actual size in pixels in wasm memory
