@@ -293,6 +293,19 @@
         window.addEventListener("keydown", makeKeyHandler("down"));
         window.addEventListener("keyup", makeKeyHandler("up"));
 
+        // undo all key listeners when focus is taken away from main screen
+        const handleBlur = () => {
+          Object.keys(keyDownState).forEach((key) => {
+            keyDownState[key] = false;
+            
+            wasm.left_stick_x_position.value = 0;
+            wasm.left_stick_y_position.value = 0;
+            wasm.left_stick_z_position.value = 0;
+          })
+        }
+        window.addEventListener('blur', handleBlur)
+        window.addEventListener('contextmenu', handleBlur)
+
         const TOTAL_ITERATIONS = Infinity;
         let currentIteration = 0;
 
