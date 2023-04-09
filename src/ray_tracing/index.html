@@ -81,6 +81,9 @@
       }
     }
   </style>
+  <!-- Hack: enables cross-origin-isolation through a service worker -->
+  <!-- see https://github.com/gzuidhof/coi-serviceworker -->
+  <script src="coi-serviceworker.min.js"></script>
 </head>
 
 <body>
@@ -94,6 +97,23 @@
     </button>
   </section>
   <script>
+    window.coi = {
+      // // A function that is run to decide whether to register the SW or not.
+      // You could for instance make this return a value based on whether you actually need to be cross origin isolated or not.
+      shouldRegister: () => true,
+      // If this function returns true, any existing service worker will be deregistered (and nothing else will happen).
+      shouldDeregister: () => false,
+      // A function that is run to decide whether to use "Cross-Origin-Embedder-Policy: credentialless" or not.
+      // See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cross-Origin-Embedder-Policy#browser_compatibility
+      coepCredentialless: () =>
+        !(navigator.userAgent.indexOf("CriOS") > -1 || !window.chrome),
+      // Override this if you want to prompt the user and do reload at your own leisure. Maybe show the user a message saying:
+      // "Click OK to refresh the page to enable <...>"
+      doReload: () => window.location.reload(),
+      // Set to true if you don't want coi to log anything to the console.
+      quiet: false,
+    };
+
     const canvas = document.querySelector("canvas");
     const ctx = canvas.getContext("2d");
     const leftStickButton = document.querySelector(".left-stick");
@@ -105,280 +125,79 @@
       ".right-thumb-location-indicator"
     );
 
-    // update canvas dimensions from within wasm
-    const updateCanvasDimensions = (width, height) => {
-      canvas.width = width;
-      canvas.height = height;
+    const worker = new Worker("worker.js");
+    console.log({ worker });
+
+    const sharedMemory = new WebAssembly.Memory({
+      shared: true,
+      initial: 2000,
+      maximum: 2000,
+    });
+
+    const array = new Uint8Array(sharedMemory.buffer);
+    const value = Atomics.load(array, 0);
+    console.log("First value from main thread initialization: ", {
+      sharedMemory,
+      array,
+      value,
+    });
+
+    worker.postMessage({
+      type: "start",
+      windowInnerWidth: window.innerWidth,
+      windowInnerHeight: window.innerHeight,
+      sharedMemory,
+    });
+
+    const render = async ({
+      canvasDataPtr,
+      canvasDataLen,
+      canvasWidth,
+      canvasHeight,
+    }) => {
+      // sync viewport with webassembly canvas
+      if (canvas.width != canvasWidth) {
+        canvas.width = canvasWidth;
+      }
+      if (canvas.height != canvasHeight) {
+        canvas.height = canvasHeight;
+      }
+
+      // get reference to canvas image data in wasm's linear memory
+      const canvasData = new Uint8Array(
+        sharedMemory.buffer,
+        canvasDataPtr,
+        canvasDataLen
+      );
+
+      // transform wasm linear memory to image data
+      const imageData = ctx.createImageData(canvasWidth, canvasHeight);
+      imageData.data.set(canvasData);
+
+      console.log({
+        imageData,
+        canvasDataFirstValue: new Uint8Array(canvasData.buffer)[0],
+      });
+
+      // load image data onto canvas
+      ctx.putImageData(imageData, 0, 0);
     };
 
-    const throwError = (errorCode) => {
-      console.error("Error occurred during execution:", { errorCode });
+    worker.onmessage = (e) => {
+      console.log("message received on main thread: ", { e });
+      const { type } = e.data;
+
+      switch (type) {
+        case "renderComplete":
+          render(e.data);
+          break;
+      }
     };
-
-    Promise.all([
-      fetch("../perlin_noise/perlin_noise_optimized.wasm"),
-      fetch("./ray_tracing_optimized.wasm"),
-    ])
-      .then(([res1, res2]) =>
-        Promise.all([res1.arrayBuffer(), res2.arrayBuffer()])
-      )
-      .then(async ([bytes1, bytes2]) => {
-        // perlin noise
-        const {
-          instance: {
-            exports: { perlin_noise },
-          },
-        } = await WebAssembly.instantiate(bytes1, { console, Math });
-
-        // ray_tracing
-        return WebAssembly.instantiate(bytes2, {
-          noise: { perlin_noise },
-          Math,
-          console,
-          canvas: { updateCanvasDimensions },
-          error: { throw: throwError },
-          Date,
-        });
-      })
-      .then(({ instance: { exports: wasm } }) => {
-        wasm.init(window.innerWidth, window.innerHeight);
-
-        console.log({ wasm })
-
-        const render = () => {
-          if (wasm.canvas_width.value && wasm.canvas_height.value) {
-            // get reference to canvas image data in wasm's linear memory
-            const canvasData = new Uint8Array(
-              wasm.memory.buffer,
-              wasm.canvas_data_ptr.value,
-              wasm.canvas_data_len.value
-            );
-
-            // transform wasm linear memory to image data
-            const imageData = ctx.createImageData(
-              wasm.canvas_width.value,
-              wasm.canvas_height.value
-            );
-            imageData.data.set(canvasData);
-
-            // load image data onto canvas
-            ctx.putImageData(imageData, 0, 0);
-          }
-        };
-
-        window.addEventListener("resize", (e) => {
-          wasm.sync_viewport(window.innerWidth, window.innerHeight);
-        });
-
-        const makeHandleTouchMove = (side) => (e) => {
-          const stickButton =
-            side === "left" ? leftStickButton : rightStickButton;
-          const thumbIndicator =
-            side === "left"
-              ? leftThumbLocationIndicatorButton
-              : rightThumbLocationIndicatorButton;
-          const {
-            width,
-            height,
-            x: elementX,
-            y: elementY,
-          } = stickButton.getBoundingClientRect();
-          const [{ pageX, pageY }] = e.targetTouches;
-          const windowWidth = window.innerWidth;
-          const windowHeight = window.innerHeight;
-          const elementCenterX = elementX + width / 2;
-          const elementCenterY = elementY + height / 2;
-          const distFromCenterX = pageX - elementCenterX;
-          const distFromCenterY = pageY - elementCenterY;
-
-          const STICK_SENSITIVITY = 2;
-
-          // vector from the center of the button to the current element,
-          // as a percentage of the element's width / height--
-          // if you want non-limited values (i.e. dragging your finger outside
-          // of the element itself is considered a stronger vector), then you
-          // should use this value
-          const px = (distFromCenterX / width) * STICK_SENSITIVITY;
-          const py = (distFromCenterY / height) * STICK_SENSITIVITY;
-
-          // get both numbers in range -1->1 going from left-to-right and bottom-to-top
-          const BORDER_OFFSET = 0.1;
-          const vectorLength = Math.sqrt(px ** 2 + py ** 2) + BORDER_OFFSET;
-
-          // convert [px, py] into a unit vector to keep it in it's containing circle
-          // (to make it act similarly to a joystick)
-          const unitX = px / vectorLength;
-          const unitY = py / vectorLength;
-
-          /** Take whichever is smaller: the unit vector one or the original */
-          const smallestX = vectorLength < 1 ? px : unitX;
-          const smallestY = vectorLength < 1 ? py : unitY;
-
-          // map from -1->1 to -1->0 -> -100 -> 5
-          const cssX = (smallestX * 0.5 - 0.5) * 100;
-          const cssY = (smallestY * 0.5 - 0.5) * 100;
-
-          // y must be inverted to match wasm memory layout
-          // (since web uses y=0 as being at the TOP of the window)
-          wasm[`${side}_stick_y_position`].value = -py;
-          wasm[`${side}_stick_x_position`].value = px;
-
-          thumbIndicator.style.setProperty(
-            "transform",
-            `translate(${cssX}%, ${cssY}%)`
-          );
-        };
-
-        let mouseDown = false;
-        const mouseMoveData = {
-          x: 0,
-          y: 0,
-          dx: 0,
-          dy: 0,
-          px: 0,
-          py: 0,
-        }
-
-        window.addEventListener('mousedown', (e) => {
-            mouseDown = true;
-            mouseMoveData.x = e.screenX;
-            mouseMoveData.y = e.screenY;
-        });
-        const MOVEMENT_CONSTANT = 150;
-        window.addEventListener('mousemove', (e) => {
-            if (!mouseDown) return;
-            mouseMoveData.dx = e.screenX - mouseMoveData.x
-            mouseMoveData.dy = e.screenY - mouseMoveData.y
-            mouseMoveData.px = mouseMoveData.dx / MOVEMENT_CONSTANT;
-            mouseMoveData.py = mouseMoveData.dy / MOVEMENT_CONSTANT;
-            wasm.right_stick_x_position.value = mouseMoveData.px ** 3 / 50;
-            wasm.right_stick_y_position.value = -(mouseMoveData.py ** 3) / 50;
-
-            // easier to reason when the y value is "flipped" to be bottom-to-top
-            const yValue = -(mouseMoveData.py);
-            if (mouseMoveData.px < 0 && yValue < 0) {
-              canvas.style.setProperty('cursor', 'sw-resize')
-            } else if (mouseMoveData.px < 0 && yValue === 0) {
-              canvas.style.setProperty('cursor', 'w-resize')
-            } else if (mouseMoveData.px < 0 && yValue > 0) {
-              canvas.style.setProperty('cursor', 'nw-resize')
-            } else if (mouseMoveData.px === 0 && yValue < 0) {
-              canvas.style.setProperty('cursor', 's-resize')
-            } else if (mouseMoveData.px === 0 && yValue === 0) {
-              canvas.style.setProperty('cursor', 'move')
-            } else if (mouseMoveData.px === 0 && yValue > 0) {
-              canvas.style.setProperty('cursor', 'n-resize')
-            } else if (mouseMoveData.px > 0 && yValue < 0) {
-              canvas.style.setProperty('cursor', 'se-resize')
-            } else if (mouseMoveData.px > 0 && yValue === 0) {
-              canvas.style.setProperty('cursor', 'e-resize')
-            } else if (mouseMoveData.px > 0 && yValue > 0) {
-              canvas.style.setProperty('cursor', 'ne-resize')
-            }
-            console.log({mouseMoveData})
-        });
-        window.addEventListener('mouseup', (e) => {
-            mouseDown = false;
-            console.log(e)
-            wasm.right_stick_x_position.value = 0;
-            wasm.right_stick_y_position.value = 0;
-        });
-
-        const makeHandleTouchEnd = (side) => () => {
-          const thumbIndicator =
-            side === "left"
-              ? leftThumbLocationIndicatorButton
-              : rightThumbLocationIndicatorButton;
-
-          wasm[`${side}_stick_y_position`].value = 0;
-          wasm[`${side}_stick_x_position`].value = 0;
-
-          thumbIndicator.style.setProperty(
-            "transform",
-            `translate(-50%, -50%)`
-          );
-        };
-
-        const leftHandleTouchMove = makeHandleTouchMove("left");
-        leftStickButton.addEventListener("touchstart", leftHandleTouchMove);
-        leftStickButton.addEventListener("touchmove", leftHandleTouchMove);
-        leftStickButton.addEventListener(
-          "touchend",
-          makeHandleTouchEnd("left")
-        );
-        leftStickButton.addEventListener("click", (e) => e.preventDefault());
-
-        const rightHandleTouchMove = makeHandleTouchMove("right");
-        rightStickButton.addEventListener("touchstart", rightHandleTouchMove);
-        rightStickButton.addEventListener("touchmove", rightHandleTouchMove);
-        rightStickButton.addEventListener(
-          "touchend",
-          makeHandleTouchEnd("right")
-        );
-        rightStickButton.addEventListener("click", (e) => e.preventDefault());
-
-        const keyDownState = {};
-        const makeKeyHandler = (handlerType) => (e) => {
-          const booleanValue = handlerType === "down";
-          if (keyDownState[e.key] === booleanValue) return;
-
-          const constant = handlerType === "down" ? 1 : -1;
-          switch (e.key) {
-            case "w":
-              wasm.left_stick_y_position.value += constant;
-              break;
-            case "s":
-              wasm.left_stick_y_position.value -= constant;
-              break;
-            case "d":
-              wasm.left_stick_x_position.value += constant;
-              break;
-            case "a":
-              wasm.left_stick_x_position.value -= constant;
-              break;
-            case " ":
-              wasm.left_stick_z_position.value += constant;
-              break;
-            case "Shift":
-              wasm.left_stick_z_position.value -= constant;
-              break;
-          }
-
-          keyDownState[e.key] = booleanValue;
-        };
-        window.addEventListener("keydown", makeKeyHandler("down"));
-        window.addEventListener("keyup", makeKeyHandler("up"));
-
-        // undo all key listeners when focus is taken away from main screen
-        const handleBlur = () => {
-          Object.keys(keyDownState).forEach((key) => {
-            keyDownState[key] = false;
-            mouseDown = false;
-
-            wasm.left_stick_x_position.value = 0;
-            wasm.left_stick_y_position.value = 0;
-            wasm.left_stick_z_position.value = 0;
-          })
-        }
-        window.addEventListener('blur', handleBlur)
-        window.addEventListener('contextmenu', handleBlur)
-
-        const TOTAL_ITERATIONS = Infinity;
-        let currentIteration = 0;
-
-        // animate
-        (async function animate() {
-          if (currentIteration >= TOTAL_ITERATIONS) {
-            return;
-          } else {
-            currentIteration += 1;
-          }
-
-          wasm.tick();
-          render();
-          requestAnimationFrame(animate);
-        })();
-      })
-      .catch((e) => console.error(e));
+    worker.onerror = (e) => {
+      console.log("error in worker: ", { e, worker });
+    };
+    worker.onmessageerror = (e) => {
+      console.log("message error on main thread: ", { e, worker });
+    };
   </script>
 </body>

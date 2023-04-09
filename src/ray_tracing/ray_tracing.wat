@@ -70,13 +70,11 @@
   (import "console" "log" (func $log_float_6 (param f64) (param f64) (param f64) (param f64) (param f64) (param f64)))
   (import "error" "throw" (func $throw (param i32)))
   (import "Date" "now" (func $now (result f64)))
-
-  ;; update actual canvas dimensions based on inner aspect-ratio calculations
-  (import "canvas" "updateCanvasDimensions" (func $update_canvas_dimensions (param $width i32) (param $height i32)))
-
+  (import "memory" "sharedMemory" (memory 2000 2000 shared))
+  
   ;; MEMORY
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (memory $memory (export "memory") 2000)
+  
   ;; Addresses:
   ;; 0-39,999 -> canvas pixel data
   ;; 40,000-79,999 -> framebuffer 1 pixel data
@@ -3037,10 +3035,6 @@
       )
     )
     
-    (call $update_canvas_dimensions 
-      (local.get $new_canvas_width) 
-      (local.get $new_canvas_height)
-    )
     (call $update_camera_values)
   )
 
