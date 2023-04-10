@@ -1,4 +1,4 @@
-const init = (windowInnerWidth, windowInnerHeight, sharedMemory) => {
+const init = ({ windowInnerWidth, windowInnerHeight, sharedMemory, uid }) => {
   const throwError = (errorCode) => {
     console.error("Error occurred during execution:", { errorCode });
   };
@@ -16,28 +16,32 @@ const init = (windowInnerWidth, windowInnerHeight, sharedMemory) => {
         instance: {
           exports: { perlin_noise },
         },
-      } = await WebAssembly.instantiate(bytes1, { console, Math });
+      } = await WebAssembly.instantiate(bytes1, { console: console as any, Math: Math as any });
 
       // ray_tracing
       return WebAssembly.instantiate(bytes2, {
         noise: { perlin_noise },
-        Math,
-        console,
+        Math: Math as any,
+        console: console as any,
         error: { throw: throwError },
-        Date,
+        Date: Date as any,
         memory: { sharedMemory },
       });
     })
     .then(({ instance: { exports: wasm } }) => {
       wasm.init(windowInnerWidth, windowInnerHeight);
       wasm.tick();
-      postMessage({
+
+      const res = {
         type: "renderComplete",
         canvasWidth: wasm.canvas_width.value,
         canvasHeight: wasm.canvas_height.value,
         canvasDataPtr: wasm.canvas_data_ptr.value,
         canvasDataLen: wasm.canvas_data_len.value,
-      });
+        uid: uid,
+      };
+      console.log({ res })
+      postMessage(res);
     })
     .catch((e) => console.error(e));
 };
@@ -49,7 +53,7 @@ onmessage = (e) => {
   switch (type) {
     case "start":
       {
-        const { windowInnerWidth, windowInnerHeight, sharedMemory } = e.data;
+        const { sharedMemory } = e.data;
         const array = new Uint8Array(sharedMemory.buffer);
         let value = Atomics.load(array, 0);
         console.log("First value from worker before render: ", {
@@ -57,7 +61,7 @@ onmessage = (e) => {
           array,
           value,
         });
-        init(windowInnerWidth, windowInnerHeight, sharedMemory);
+        init(e.data);
         value = Atomics.load(array, 0);
         console.log("First value from worker after render: ", {
           sharedMemory,
