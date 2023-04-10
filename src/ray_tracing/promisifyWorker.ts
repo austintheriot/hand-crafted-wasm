@@ -1,9 +1,11 @@
+export type PromisePoolObject = { res: (value: unknown) => void; rej: (reason?: any) => any };
+
 export class PromisifyWorker {
   private worker: Worker;
-
-  private requests: Map<
-    string,
-    { res: (value: unknown) => void; rej: (reason?: any) => any }
+  private uid = 0n;
+  private promisePool: Map<
+    BigInt,
+    PromisePoolObject
   > = new Map();
 
   constructor(scriptURL: string | URL, options?: WorkerOptions | undefined) {
@@ -11,12 +13,21 @@ export class PromisifyWorker {
     this.worker.onmessage = this.resolve.bind(this);
   }
 
+  private getNewUid(): BigInt {
+    const uid = this.uid;
+    this.uid += 1n;
+    return uid;
+  }
+
+  /** 
+   * Match up a message received in main thread with the promise
+   * that was created when the original message was sent from the main thread.
+   */
   private resolve(e: MessageEvent<any>) {
-    console.log("Message received from worker: ", e.data);
     const { uid } = e.data;
-    if (typeof uid === "string") {
-      this.requests.get(uid)?.res(e.data);
-      this.requests.delete(uid);
+    if (typeof uid === "bigint") {
+      this.promisePool.get(uid)?.res(e.data);
+      this.promisePool.delete(uid);
     } else {
       console.error(
         "PromisifyError received message from a worker without a uid corresponding to any sent message: ",
@@ -25,30 +36,39 @@ export class PromisifyWorker {
     }
   }
 
+  /** 
+   * Send a message to a worker thread.
+   * 
+   * The returned promise is resolved once the worker thread sends a 
+   * message back to the main thread with a matching uid.
+   */
   public postMessage<M extends object | undefined | null, R>(
     message: M,
     transfer: Transferable[] = []
   ): Promise<R> {
-    this.worker.postMessage(message, transfer);
-
     // save promise and resolve later once a matching uid has been received
-    const uid = crypto.randomUUID();
+    const uid = this.getNewUid();
     const p = new Promise((res, rej) => {
-      this.requests.set(uid, { res, rej });
+      this.promisePool.set(uid, { res, rej });
     });
-    const messageWithUid = {
-      ...message,
-      uid,
-    };
-    this.worker.postMessage(messageWithUid);
+    this.worker.postMessage(
+      {
+        ...message,
+        uid,
+      },
+      transfer
+    );
     return p as Promise<R>;
   }
 
+  /**
+   * Rejects all remaining postMessage promises and deletes all internal data
+   */
   public terminate() {
     this.worker.terminate();
-    this.requests.forEach(({ rej }, key) => {
+    this.promisePool.forEach(({ rej }, key) => {
       rej("Worker was terminated before request could be resolved");
-      this.requests.delete(key);
+      this.promisePool.delete(key);
     });
   }
 }
