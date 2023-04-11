@@ -102,7 +102,7 @@
   ;; must be initialized in $init function
   (global $canvas_data_len (export "canvas_data_len") (mut i32) (i32.const 0))
 
-  (global $canvas_max_data_len (mut i32) (i32.const 0))
+  (global $canvas_max_data_len (export "canvas_max_data_len") (mut i32) (i32.const 0))
 
   (global $bytes_per_pixel i32 (i32.const 4))
 
@@ -2008,6 +2008,10 @@
   )
 
   (func $averaged_render_to_canvas
+    ;; ranging from 0->canvas_data_len
+    (param $mem_index_start i32)
+    (param $mem_index_end i32)
+
     ;; get pixel from previous, plain render currently on canvas
     ;; get pixel from previous, averaged render currently in framebuffer
     ;; render the new average onto canvas
@@ -2035,7 +2039,8 @@
     (local $framebuffer_pixel_weight f64)
 
     ;; initialize data for looping
-    (local.set $end_i (global.get $canvas_max_data_len))
+    (local.set $start_i (local.get $mem_index_start))
+    (local.set $end_i (local.get $mem_index_end))
     (local.set $step (global.get $bytes_per_pixel))
 
     ;; iterate through memory indexes and average the previous framebuffer
@@ -2214,6 +2219,10 @@
 
 
   (func $plain_render_to_framebuffer
+    ;; ranging from 0->canvas_data_len
+    (param $mem_index_start i32)
+    (param $mem_index_end i32)
+
     (local $start_i i32) 
     (local $end_i i32) 
     (local $i i32)
@@ -2237,11 +2246,18 @@
     )
     
     (local.set $step (global.get $bytes_per_pixel))
-    (local.set $start_i (global.get $framebuffer_ptr))
-    (local.set $end_i (i32.add
-      (global.get $framebuffer_ptr)
-      (global.get $canvas_data_len)
-    ))
+    (local.set $start_i 
+      (i32.add
+        (global.get $framebuffer_ptr)
+        (local.get $mem_index_start)
+      )
+    )
+    (local.set $end_i 
+      (i32.add
+        (global.get $framebuffer_ptr)
+        (local.get $mem_index_end)
+      )
+    )
 
     ;; outer loop - x coords
     (local.set $i (local.get $start_i))
@@ -2533,7 +2549,7 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   
   ;; runs through entire camera pipeline to update all values
-  (func $update_camera_values (export "update_camera_values")
+  (func $update_camera_values
     (local $u_cross_result_x f64)
     (local $u_cross_result_y f64)
     (local $u_cross_result_z f64)
@@ -3178,12 +3194,21 @@
   )
 
   ;; called on each tick to update all internal state
-  (func (export "tick")
+  (func (export "tick") 
+     ;; ranging from 0->canvas_max_length
+    (param $mem_index_start i32)
+    (param $mem_index_end i32)
     (call $update_camera_based_on_stick_position)
     (call $update_position_based_on_controls)
     (call $update_camera_values) 
-    (call $plain_render_to_framebuffer)
-    (call $averaged_render_to_canvas)
+    (call $plain_render_to_framebuffer 
+      (local.get $mem_index_start)
+      (local.get $mem_index_end)
+    )
+    (call $averaged_render_to_canvas
+      (local.get $mem_index_start)
+      (local.get $mem_index_end)
+    )
   )
 
   (func $init_now

@@ -1,5 +1,6 @@
 import { MainToWorkerMessageTypes } from "./messages";
 import { PromisifyWorker } from "./promisifyWorker";
+import { WorkerToMainGlobals } from "./worker";
 
 const canvas = document.querySelector("canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
@@ -36,7 +37,10 @@ async function main() {
     quiet: false,
   };
 
-  const worker = new PromisifyWorker("worker.ts");
+  const NUM_WORKERS = 16;
+  const workers = new Array(NUM_WORKERS)
+    .fill(null)
+    .map(() => new PromisifyWorker("worker.ts"));
 
   const sharedMemory = new WebAssembly.Memory({
     shared: true,
@@ -73,20 +77,48 @@ async function main() {
     ctx.putImageData(imageData, 0, 0);
   };
 
-  await worker.postMessage({
-    type: MainToWorkerMessageTypes.INIT,
-    windowInnerWidth: window.innerWidth,
-    windowInnerHeight: window.innerHeight,
-    sharedMemory,
-  });
+  let [globals] = (await Promise.all(
+    workers.map((worker) =>
+      worker.postMessage({
+        type: MainToWorkerMessageTypes.INIT,
+        windowInnerWidth: window.innerWidth,
+        windowInnerHeight: window.innerHeight,
+        sharedMemory,
+      })
+    )
+  )) as WorkerToMainGlobals[];
 
-  addListeners(worker);
+  workers.forEach(addListeners);
+  
+  /**
+   * Creates list of windows into wasm linear memory to give each worker:
+   * @example
+   * ```
+   * [[0, 719], [720, 1439], [1440, 2159]] // etc.
+   * ```
+   */
+  type Accumulator = [number, [number, number][]];
+  const windowSize = Math.floor(globals.canvasMaxDataLen / workers.length);
+  const [_, canvasPtrWindows]: Accumulator = workers.reduce(
+    ([sum, ptrs]: Accumulator, _, i) => {
+      if (i === workers.length - 1) {
+        return [sum + windowSize, [...ptrs, [sum, globals.canvasMaxDataLen]]];
+      } else {
+        return [sum + windowSize, [...ptrs, [sum, sum + windowSize - 1]]];
+      }
+    },
+    [0, []] as Accumulator
+  );
 
   const animate = async () => {
-    const wasmGlobals = await worker.postMessage({
-      type: MainToWorkerMessageTypes.TICK,
-    });
-    render(wasmGlobals as any);
+    const [updatedGlobals] = await Promise.all(canvasPtrWindows.map(([start, end], i) =>
+    workers[i].postMessage({
+        type: MainToWorkerMessageTypes.TICK,
+        memIndexStart: start,
+        memIndexEnd: end,
+      })
+    ));
+    render(updatedGlobals as any);
     requestAnimationFrame(animate);
   };
 

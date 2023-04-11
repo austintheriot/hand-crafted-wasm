@@ -1,4 +1,4 @@
-interface RayTracingExports {
+export interface RayTracingExports {
   canvas_width: {
     value: number;
   };
@@ -26,6 +26,25 @@ interface RayTracingExports {
   left_stick_z_position: {
     value: number;
   };
+  canvas_max_data_len: {
+    value: number;
+  };
+  init(windowInnerWidth: number, windowInnerHeight: number): void;
+  sync_viewport(windowInnerWidth: number, windowInnerHeight: number): void;
+  tick(memIndexStart: number, memIndexEnd: number ): void;
+}
+
+export interface WorkerToMainGlobals {
+  canvasWidth: number;
+  canvasHeight: number;
+  canvasDataPtr: number;
+  canvasDataLen: number;
+  rightStickXPosition: number;
+  rightStickYPosition: number;
+  leftStickyXPosition: number;
+  leftStickYPosition: number;
+  leftStickZPosition: number;
+  canvasMaxDataLen: number;
   init(windowInnerWidth: number, windowInnerHeight: number): void;
   sync_viewport(windowInnerWidth: number, windowInnerHeight: number): void;
   tick(): void;
@@ -38,6 +57,12 @@ const getWasmGlobals = () => ({
   canvasHeight: wasm.canvas_height.value,
   canvasDataPtr: wasm.canvas_data_ptr.value,
   canvasDataLen: wasm.canvas_data_len.value,
+  canvasMaxDataLen: wasm.canvas_max_data_len.value,
+  rightStickXPosition: wasm.right_stick_x_position.value,
+  rightStickYPosition: wasm.right_stick_y_position.value,
+  leftStickyXPosition: wasm.left_stick_x_position.value,
+  leftStickYPosition: wasm.left_stick_y_position.value,
+  leftStickZPosition: wasm.left_stick_z_position.value,
 });
 
 const init = async ({
@@ -82,8 +107,8 @@ const init = async ({
   });
 };
 
-const tick = ({ uid, WorkerToMainMessageTypes }) => {
-  wasm.tick();
+const tick = ({ uid, WorkerToMainMessageTypes, memIndexStart, memIndexEnd }) => {
+  wasm.tick(memIndexStart, memIndexEnd);
 
   postMessage({
     type: WorkerToMainMessageTypes.TICK_DONE,
