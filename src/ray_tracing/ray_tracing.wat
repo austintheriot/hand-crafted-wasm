@@ -1888,29 +1888,30 @@
     (local.set $step (i32.const 1))
     (local.set $end_i (global.get $samples_per_pixel))
     
-    (local.set $randomized_s
-      (f64.add
-        (local.get $s)
-        (f64.div
-          (call $random)
-          (f64.convert_i32_u
-            (global.get $canvas_width)
-          )
-        )
-      )
-    )
+    ;; enables anti-aliasing (disable for now while debugging hits)
+    ;; (local.set $randomized_s
+    ;;   (f64.add
+    ;;     (local.get $s)
+    ;;     (f64.div
+    ;;       (f64.const 0)
+    ;;       (f64.convert_i32_u
+    ;;         (global.get $canvas_width)
+    ;;       )
+    ;;     )
+    ;;   )
+    ;; )
 
-    (local.set $randomized_t
-      (f64.add
-        (local.get $t)
-        (f64.div
-          (call $random)
-          (f64.convert_i32_u
-            (global.get $canvas_height)
-          )
-        )
-      )
-    )
+    ;; (local.set $randomized_t
+    ;;   (f64.add
+    ;;     (local.get $t)
+    ;;     (f64.div
+    ;;       (f64.const 0)
+    ;;       (f64.convert_i32_u
+    ;;         (global.get $canvas_height)
+    ;;       )
+    ;;     )
+    ;;   )
+    ;; )
 
     (block $color_average_block 
       (local.set $i (local.get $start_i))
@@ -1928,8 +1929,10 @@
                     (local.set $ray_direction_y
                       (local.set $ray_direction_z
                         (call $get_ray_from_camera
-                          (local.get $randomized_s)
-                          (local.get $randomized_t)
+                          (local.get $s)
+                          (local.get $t)
+                          ;; (local.get $randomized_s)
+                          ;; (local.get $randomized_t)
                         )
                       )
                     )
