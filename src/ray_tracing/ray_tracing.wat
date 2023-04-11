@@ -638,23 +638,13 @@
   )
   
   (func $draw_pixel 
-    (param $x i32) (param $y i32)
+    (param $mem_ptr i32)
     (param $r i32) (param $g i32) (param $b i32) (param $a i32)
-    (param $memory_ptr i32)
-    (local $canvas_mem_index i32)
-
-    (local.set $canvas_mem_index 
-      (call $canvas_coords_to_canvas_mem_index 
-        (local.get $x)
-        (local.get $y)
-        (local.get $memory_ptr)
-      )
-    )
 
     ;; store each pixel's color value (0->255) in wasm linear memory
     (i32.store8
       offset=0
-      (local.get $canvas_mem_index)
+      (local.get $mem_ptr)
       (call $i32_min
         (local.get $r)
         (i32.const 0xff)
@@ -662,7 +652,7 @@
     )
     (i32.store8
       offset=1
-      (local.get $canvas_mem_index)
+      (local.get $mem_ptr)
       (call $i32_min
         (local.get $g)
         (i32.const 0xff)
@@ -670,7 +660,7 @@
     )
     (i32.store8
       offset=2
-      (local.get $canvas_mem_index)
+      (local.get $mem_ptr)
       (call $i32_min
         (local.get $b)
         (i32.const 0xff)
@@ -678,7 +668,7 @@
     )
     (i32.store8
       offset=3
-      (local.get $canvas_mem_index)
+      (local.get $mem_ptr)
       (call $i32_min
         (local.get $a)
         (i32.const 0xff)
@@ -2226,14 +2216,8 @@
   (func $plain_render_to_framebuffer
     (local $start_i i32) 
     (local $end_i i32) 
-
-    (local $start_j i32) 
-    (local $end_j i32) 
-
-    (local $step i32)
-
     (local $i i32)
-    (local $j i32)
+    (local $step i32)
 
     (local $progress_x f64)
     (local $progress_y f64)
@@ -2251,10 +2235,13 @@
         (i32.const 1)
       )
     )
-
-    (local.set $step (i32.const 1))
-    (local.set $end_i (global.get $canvas_width))
-    (local.set $end_j (global.get $canvas_height))
+    
+    (local.set $step (global.get $bytes_per_pixel))
+    (local.set $start_i (global.get $framebuffer_ptr))
+    (local.set $end_i (i32.add
+      (global.get $framebuffer_ptr)
+      (global.get $canvas_data_len)
+    ))
 
     ;; outer loop - x coords
     (local.set $i (local.get $start_i))
@@ -2262,53 +2249,61 @@
       (if (i32.lt_s (local.get $i) (local.get $end_i))
         (then
 
-
-          (block $inner_block 
-            ;; inner loop - y coords
-            (local.set $j (local.get $start_j))
-            (loop $inner_loop
-              (if (i32.lt_s (local.get $j) (local.get $end_j))
-                (then
-
-                  ;; convert pixel numbers to coordinates 0->1
-                  (local.set $s
-                    (f64.div
-                      (f64.convert_i32_u (local.get $i))
-                      (f64.convert_i32_u (global.get $canvas_width))
-                    )
-                  )
-                   (local.set $t
-                    (f64.sub
-                      ;; flip y axis, since canvas is upside down
-                      ;; compared to normal rendering conventions
-                      (f64.const 1.0)
-                      (f64.div
-                        (f64.convert_i32_u (local.get $j))
-                        (f64.convert_i32_u (global.get $canvas_height))
-                      )
-                    )
-                  )
-
-                  (call $draw_pixel 
-                    ;; supplies the pixel coordinates
+          ;; convert memory location to canvas coordinates 0->1
+          (local.set $s
+            (f64.div
+              (f64.convert_i32_u
+                (i32.rem_u
+                  (i32.sub
                     (local.get $i)
-                    (local.get $j)
-                    ;; supplies the color for that pixel
-                    (call $get_pixel_color
-                      (local.get $s)
-                      (local.get $t)
-                    )
-                    ;; pointer to where to write in wasm linear memory
                     (global.get $framebuffer_ptr)
                   )
-                  
-                  (local.set $j (i32.add (local.get $j) (local.get $step)))
-                  ;; return to beginning of loop
-                  (br $inner_loop)
+                  (i32.mul
+                    (global.get $canvas_width)
+                    (global.get $bytes_per_pixel)
+                  )
                 )
-                ;; exit loop
-                (else (br $inner_block))
               )
+              (f64.convert_i32_u 
+                (i32.mul
+                  (global.get $canvas_width)
+                  (global.get $bytes_per_pixel)
+                )
+              )
+            )
+          )
+          (local.set $t
+            ;; flip y axis, since canvas is upside down
+            ;; compared to normal rendering conventions
+            (f64.sub
+              (f64.const 1.0)
+              (f64.div
+                (f64.convert_i32_u
+                  (i32.div_u
+                    (i32.sub
+                      (local.get $i)
+                      (global.get $framebuffer_ptr)
+                    )
+                    (i32.mul
+                      (global.get $canvas_width)
+                      (global.get $bytes_per_pixel)
+                    )
+                  )
+                )
+                (f64.convert_i32_u 
+                  (global.get $canvas_height)
+                )
+              )
+            )
+          )
+
+          (call $draw_pixel 
+            ;; i = direct pointer to framebuffer memory
+            (local.get $i)
+            ;; supplies the color for that pixel
+            (call $get_pixel_color
+              (local.get $s)
+              (local.get $t)
             )
           )
 
