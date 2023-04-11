@@ -77,7 +77,7 @@ async function main() {
     ctx.putImageData(imageData, 0, 0);
   };
 
-  let [globals] = (await Promise.all(
+  const [globals] = (await Promise.all(
     workers.map((worker) =>
       worker.postMessage({
         type: MainToWorkerMessageTypes.INIT,

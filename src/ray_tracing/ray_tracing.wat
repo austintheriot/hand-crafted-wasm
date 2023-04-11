@@ -2,7 +2,7 @@
   ;; TODOS (bugs/fixes/cleanup)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; - fix INSIDE normals not getting set/calculated correctly
-  ;; - get rid of unneccessary exporrts (all the camera globals)
+  ;; - fix antialiasing -- there seem to be jagged edges along sphere
   ;; - get rid of unused imports (console logs, etc.)
   ;; - remove bounds checks from draw_pixel ?
   ;; - calculate memory needed for canvas dynamically to allow manipulating dimensions dynamically
@@ -77,8 +77,7 @@
   
   ;; Addresses:
   ;; 0-39,999 -> canvas pixel data
-  ;; 40,000-79,999 -> framebuffer 1 pixel data
-  ;; 80,000-119,999 -> framebuffer 2 pixel data
+  ;; 40,000-79,999 -> framebuffer pixel data
   ;; 120,000-? -> object data
 
   ;; CANVAS CONSTANTS
@@ -107,7 +106,7 @@
   (global $bytes_per_pixel i32 (i32.const 4))
 
   ;; largest possible size the canvas can be in any one direction in pixels
-  (global $max_dimension i32 (i32.const 60))
+  (global $max_dimension i32 (i32.const 100))
 
   ;; "object" is any object in the scene (sphere, quad, etc.)
   (global $object_list_ptr (mut i32) (i32.const 80000))
@@ -116,7 +115,7 @@
   (global $object_size i32 (i32.const 76))
   
   ;; 1 index per object
-  (global $object_list_len (mut i32) (i32.const 0))
+  (global $object_list_len (export "object_list_len") (mut i32) (i32.const 0))
 
   ;; GENERAL CONSTANTS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

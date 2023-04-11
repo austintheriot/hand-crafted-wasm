@@ -29,6 +29,9 @@ export interface RayTracingExports {
   canvas_max_data_len: {
     value: number;
   };
+  object_list_len: {
+    value: number;
+  };
   init(windowInnerWidth: number, windowInnerHeight: number): void;
   sync_viewport(windowInnerWidth: number, windowInnerHeight: number): void;
   tick(memIndexStart: number, memIndexEnd: number ): void;
@@ -45,14 +48,12 @@ export interface WorkerToMainGlobals {
   leftStickYPosition: number;
   leftStickZPosition: number;
   canvasMaxDataLen: number;
-  init(windowInnerWidth: number, windowInnerHeight: number): void;
-  sync_viewport(windowInnerWidth: number, windowInnerHeight: number): void;
-  tick(): void;
+  objectListLen: number;
 }
 
 let wasm: RayTracingExports;
 
-const getWasmGlobals = () => ({
+const getWasmGlobals = (): WorkerToMainGlobals => ({
   canvasWidth: wasm.canvas_width.value,
   canvasHeight: wasm.canvas_height.value,
   canvasDataPtr: wasm.canvas_data_ptr.value,
@@ -63,6 +64,7 @@ const getWasmGlobals = () => ({
   leftStickyXPosition: wasm.left_stick_x_position.value,
   leftStickYPosition: wasm.left_stick_y_position.value,
   leftStickZPosition: wasm.left_stick_z_position.value,
+  objectListLen: wasm.object_list_len.value,
 });
 
 const init = async ({
